@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORAGE — Tableau de bord casting</title>
+<style>
+  :root {
+    --dark: #0d1b2a; --dark2: #0a1420; --green: #1a6b3c; --green-light: #2f9a5b;
+    --gray: #8a94a3; --line: rgba(255,255,255,0.12); --card: #12233a;
+    --oui: #2f9a5b; --peutetre: #b39a3a; --non: #b3564a; --archive-c: #6b6f76;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 80px; }
+  h1 { font-size: 32px; margin: 0 0 4px; letter-spacing: 1px; }
+  .sub { color: var(--gray); font-size: 13px; margin-bottom: 32px; }
+
+  #gate { max-width: 360px; margin: 120px auto; text-align: center; }
+  #gate input { width: 100%; padding: 12px 14px; border-radius: 6px; border: 1px solid var(--line); background: #0d1826; color: #fff; font-size: 14px; margin-bottom: 12px; }
+  #gate button { width: 100%; padding: 12px; border: none; border-radius: 6px; background: var(--green); color: #fff; font-weight: 700; cursor: pointer; }
+  #gate button:hover { background: var(--green-light); }
+  #gate .err { color: #e07a6b; font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+  #dashboard { display: none; }
+  .stats { display: flex; gap: 14px; margin-bottom: 28px; flex-wrap: wrap; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; min-width: 110px; }
+  .stat .num { font-size: 24px; font-weight: 800; }
+  .stat .label { color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .role-group { margin-bottom: 30px; }
+  .role-group h2 { font-size: 16px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
+  .role-group-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
+  .role-group-header h2 { border: none; padding: 0; margin: 0; }
+  .role-closed-badge { background: var(--non); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; margin-left: 8px; }
+  .role-toggle-btn { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .role-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
+  .sub-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; display: grid; grid-template-columns: 96px 1.2fr 1fr 1fr 1fr auto auto auto; gap: 16px; align-items: start; font-size: 13px; }
+  .sub-card.is-archived { opacity: 0.6; }
+  .sub-photo { width: 92px; height: 122px; object-fit: cover; border-radius: 6px; background: #0d1826; border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+  .sub-photo.no-photo { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; color: var(--gray); padding: 4px; line-height: 1.3; }
+  .sub-card > *:not(.sub-photo):not(.vimeo-row):not(.photo-row):not(.scene-row):not(.edit-row) { padding-top: 6px; }
+  .sub-name { font-weight: 700; font-size: 15px; }
+  .sub-name span { display: block; color: var(--gray); font-weight: 400; font-size: 11px; margin-top: 2px; }
+  .sub-links a { color: var(--green-light); text-decoration: none; display: block; font-size: 12px; }
+  .sub-links a:hover { text-decoration: underline; }
+  .sub-note { color: #c9d0d8; font-size: 12.5px; }
+  select { background: #0d1826; color: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+  select.oui { border-color: var(--oui); }
+  select.peutetre { border-color: var(--peutetre); }
+  select.non { border-color: var(--non); }
+  .archive-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .archive-btn:hover { color: #fff; border-color: var(--archive-c); }
+  .edit-toggle-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .edit-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
+  .codes-add-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .vimeo-input { background: #0d1826; color: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; width: 100%; }
+  .vimeo-input:focus { outline: none; border-color: var(--oui); }
+  .vimeo-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .vimeo-row label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .vimeo-save { background: var(--oui); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .vimeo-save:hover { opacity: 0.85; }
+  .vimeo-saved-msg { font-size: 11px; color: var(--oui); white-space: nowrap; }
+  .photo-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .photo-row label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .photo-row input[type="file"] { font-size: 11px; color: var(--gray); max-width: 200px; }
+  .photo-save { background: var(--green); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .photo-save:hover { opacity: 0.85; }
+  .photo-saved-msg { font-size: 11px; color: var(--oui); white-space: nowrap; }
+  .comments-row { grid-column: 1 / -1; margin-top: 6px; }
+  .comments-row .label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .comment-item { font-size: 12.5px; color: #d7dde3; padding-left: 8px; border-left: 2px solid var(--peutetre); margin-bottom: 4px; }
+  .comment-item .meta { color: var(--gray); font-size: 10.5px; }
+  .scene-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .scene-btn:hover { background: var(--peutetre); color: #fff; }
+  .scene-sent { font-size: 11px; color: var(--oui); white-space: nowrap; margin-left: 6px; }
+  .scene-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .scene-row label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .empty { color: var(--gray); font-size: 13px; padding: 20px 0; }
+  .refresh { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 20px; }
+  .refresh:hover { color: #fff; }
+  .load-more-btn { display: block; width: 100%; background: var(--card); border: 1px dashed var(--line); color: var(--gray); padding: 12px; border-radius: 8px; font-size: 13px; cursor: pointer; margin-top: 6px; }
+  .load-more-btn:hover { color: #fff; border-color: var(--green-light); }
+  .add-profile-panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; }
+  .add-profile-panel h3 { margin: 0 0 16px; font-size: 16px; color: var(--oui); }
+  .add-profile-panel form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .add-profile-panel .full { grid-column: 1 / -1; }
+  .add-profile-panel label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+  .add-profile-panel input, .add-profile-panel select, .add-profile-panel textarea {
+    width: 100%; background: #0d1826; border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 10px; color: #fff; font-family: inherit; font-size: 13px;
+  }
+  .add-profile-panel textarea { min-height: 50px; resize: vertical; }
+  .add-profile-actions { display: flex; align-items: center; gap: 10px; }
+  .add-profile-actions button[type="submit"] { background: var(--oui); border: none; color: #fff; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .add-profile-actions button[type="button"] { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 9px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .add-profile-msg { font-size: 12px; color: var(--gray); }
+  .edit-row { grid-column: 1 / -1; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); display: none; }
+  .edit-row.open { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .edit-row .full { grid-column: 1 / -1; }
+  .edit-row label { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 3px; }
+  .edit-row input, .edit-row textarea {
+    width: 100%; background: #0d1826; border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 9px; color: #fff; font-family: inherit; font-size: 12.5px;
+  }
+  .edit-row textarea { min-height: 40px; resize: vertical; }
+  .edit-actions { display: flex; align-items: center; gap: 8px; }
+  .edit-save-btn { background: var(--oui); border: none; color: #fff; padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .edit-cancel-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .edit-msg { font-size: 11px; color: var(--oui); }
+
+  #archive-section { margin-top: 50px; border-top: 1px solid var(--line); padding-top: 24px; }
+  #archive-toggle { background: none; border: none; color: var(--gray); font-size: 14px; cursor: pointer; padding: 0; margin-bottom: 16px; }
+  #archive-toggle:hover { color: #fff; }
+  #archive-list { display: none; }
+  #archive-list.open { display: block; }
+  .restore-btn { background: var(--oui); border: none; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .delete-btn { background: transparent; border: 1px solid var(--non); color: var(--non); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .delete-btn:hover { background: var(--non); color: #fff; }
+  .archive-actions { display: flex; gap: 6px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="gate">
+      <h1>ORAGE</h1>
+      <div class="sub">Tableau de bord — accès privé</div>
+      <input type="password" id="pw" placeholder="Mot de passe">
+      <button id="enter">Accéder au tableau de bord</button>
+      <div class="err" id="gate-err"></div>
+    </div>
+
+    <div id="dashboard">
+      <h1>ORAGE — Tableau de bord</h1>
+      <div class="sub">Candidatures reçues des agences</div>
+      <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+        <button class="refresh" id="refresh">↻ Actualiser</button>
+        <button class="refresh" id="export-oui" style="border-color:var(--oui);color:var(--oui);">⬇ Exporter les « Oui » (PDF)</button>
+        <button class="refresh" id="export-peutetre" style="border-color:var(--peutetre);color:var(--peutetre);">⬇ Exporter les « Peut-être » (PDF)</button>
+        <button class="refresh" id="open-client" style="border-color:var(--green-light);color:var(--green-light);">↗ Ouvrir la page client</button>
+        <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
+      </div>
+
+      <div id="add-profile-panel" class="add-profile-panel" style="display:none;">
+        <h3>Ajouter un profil</h3>
+        <form id="add-profile-form">
+          <div>
+            <label>Rôle *</label>
+            <select name="role" required id="add-role-select"></select>
+          </div>
+          <div>
+            <label>Nom du comédien *</label>
+            <input type="text" name="name" required>
+          </div>
+          <div>
+            <label>Agence</label>
+            <input type="text" name="agency">
+          </div>
+          <div>
+            <label>Email de contact</label>
+            <input type="email" name="email">
+          </div>
+          <div>
+            <label>Deuxième email de contact</label>
+            <input type="email" name="email2">
+          </div>
+          <div>
+            <label>Lien CV / fiche</label>
+            <input type="text" name="cv">
+          </div>
+          <div>
+            <label>Lien showreel</label>
+            <input type="text" name="showreel">
+          </div>
+          <div>
+            <label>Disponibilités</label>
+            <input type="text" name="availability">
+          </div>
+          <div class="full">
+            <label>Photo (JPG ou PNG, optionnel)</label>
+            <input type="file" name="photo" accept="image/jpeg,image/png,image/jpg">
+          </div>
+          <div class="full">
+            <label>Note</label>
+            <textarea name="note"></textarea>
+          </div>
+          <div class="full add-profile-actions">
+            <button type="submit">Ajouter</button>
+            <button type="button" id="cancel-add-profile">Annuler</button>
+            <span class="add-profile-msg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <div id="groups"></div>
+
+      <div id="archive-section">
+        <button id="archive-toggle">▸ Profils archivés (<span id="archive-count">0</span>)</button>
+        <div id="archive-list"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const ROLES_ORDER = ["ALEXANDRE DE CHASTENET", "AUGUSTIN DE CHASTENET", "BIXENTE APARRA", "LÉANDRO APARRA", "LORÉA APARRA", "VANESSA", "JO", "STÉPHANIE CRÉMIEUX", "ROMÉO GARANO", "MIKEL BASAGOITI", "RÉMI", "ESTEBAN AUDIBERT", "MATHIS", "ELIOTT BOVAL"];
+const STATUS_ORDER = ["oui", "peutetre", "non"];
+let PASSWORD = "";
+let CLOSED_ROLES = [];
+
+function normalizeStatus(status) {
+  if (["oui", "shortlist", "validated"].includes(status)) return "oui";
+  if (["non", "rejected"].includes(status)) return "non";
+  return "peutetre";
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
+
+async function resizeImage(file, maxDim, quality) {
+  maxDim = maxDim || 500;
+  quality = quality || 0.75;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        if (!img.naturalWidth || !img.naturalHeight) {
+          reject(new Error("Image non décodable"));
+          return;
+        }
+        let width = img.width, height = img.height;
+        if (width > height && width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Image invalide"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Lecture du fichier impossible"));
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById("enter").addEventListener("click", tryEnter);
+document.getElementById("pw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryEnter(); });
+document.getElementById("refresh").addEventListener("click", loadData);
+document.getElementById("export-oui").addEventListener("click", () => exportDocx("oui"));
+document.getElementById("export-peutetre").addEventListener("click", () => exportDocx("peutetre"));
+document.getElementById("open-client").addEventListener("click", () => window.open("/client", "_blank"));
+document.getElementById("archive-toggle").addEventListener("click", () => {
+  const list = document.getElementById("archive-list");
+  list.classList.toggle("open");
+  document.getElementById("archive-toggle").textContent =
+    (list.classList.contains("open") ? "▾" : "▸") + " Profils archivés (" + document.getElementById("archive-count").textContent + ")";
+});
+
+document.getElementById("toggle-add-form").addEventListener("click", () => {
+  const panel = document.getElementById("add-profile-panel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+});
+
+document.getElementById("cancel-add-profile").addEventListener("click", () => {
+  document.getElementById("add-profile-panel").style.display = "none";
+  document.getElementById("add-profile-form").reset();
+});
+
+const addRoleSelect = document.getElementById("add-role-select");
+addRoleSelect.innerHTML = ROLES_ORDER.map(r => "<option value=\"" + r + "\">" + r + "</option>").join("");
+
+document.getElementById("add-profile-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type="submit"]');
+  const msg = form.querySelector(".add-profile-msg");
+  const data = Object.fromEntries(new FormData(form).entries());
+  const fileInput = form.querySelector('input[type="file"]');
+  const file = fileInput.files[0];
+  btn.disabled = true;
+  msg.textContent = "Enregistrement...";
+  try {
+    if (file) {
+      data.photo = await resizeImage(file);
+    } else {
+      delete data.photo;
+    }
+    const res = await fetch("/api/admin-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || "");
+    }
+    msg.textContent = "Profil ajouté ✓";
+    form.reset();
+    setTimeout(() => {
+      document.getElementById("add-profile-panel").style.display = "none";
+      msg.textContent = "";
+      loadData();
+    }, 800);
+  } catch (err) {
+    msg.textContent = (err && err.message) || "Erreur lors de l'ajout.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function exportDocx(status) {
+  try {
+    const res = await fetch("/api/export?status=" + status, {
+      headers: { "x-dashboard-password": PASSWORD }
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert("Erreur export : " + (body.error || res.status));
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ORAGE_" + status + "_" + new Date().toISOString().slice(0, 10) + ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert("Erreur lors de l'export.");
+  }
+}
+
+async function tryEnter() {
+  const pw = document.getElementById("pw").value;
+  const errEl = document.getElementById("gate-err");
+  errEl.textContent = "";
+  try {
+    const res = await fetch("/api/submissions", { headers: { "x-dashboard-password": pw } });
+    if (!res.ok) {
+      let detail = "";
+      try { const body = await res.json(); detail = body.error || body.detail || ""; } catch {}
+      if (res.status === 401) {
+        errEl.textContent = "Mot de passe incorrect.";
+      } else {
+        errEl.textContent = "Erreur serveur (" + res.status + ")" + (detail ? " : " + detail : "");
+      }
+      return;
+    }
+    PASSWORD = pw;
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    await refreshClosedRoles();
+    render(await res.json());
+  } catch {
+    errEl.textContent = "Erreur de connexion.";
+  }
+}
+
+async function refreshClosedRoles() {
+  try {
+    const res = await fetch("/api/roles-status", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      CLOSED_ROLES = data.closedRoles || [];
+    }
+  } catch {
+    // keep previous value on failure
+  }
+}
+
+async function loadData() {
+  await refreshClosedRoles();
+  const res = await fetch("/api/submissions", { headers: { "x-dashboard-password": PASSWORD } });
+  if (res.ok) render(await res.json());
+}
+
+async function updateField(id, field, value) {
+  try {
+    const res = await fetch("/api/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ id: id, field: field, value: value })
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function sendScene(id) {
+  try {
+    const res = await fetch("/api/send-scene", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ id })
+    });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, error: body.error, detail: body.detail };
+  } catch {
+    return { ok: false, error: "Erreur de connexion" };
+  }
+}
+
+async function deleteForever(id) {
+  try {
+    const res = await fetch("/api/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ id: id })
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function toggleRole(role, closed) {
+  try {
+    const res = await fetch("/api/toggle-role", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ role, closed })
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function loadPhotoInto(placeholderEl, id, name) {
+  try {
+    const res = await fetch("/api/photo?id=" + encodeURIComponent(id) + "&t=" + Date.now(), {
+      headers: { "x-dashboard-password": PASSWORD },
+      cache: "no-store"
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.photo) {
+      const img = document.createElement("img");
+      img.className = "sub-photo";
+      img.src = data.photo;
+      img.alt = name;
+      placeholderEl.replaceWith(img);
+    } else {
+      placeholderEl.classList.add("no-photo");
+      placeholderEl.textContent = "Pas de photo";
+    }
+  } catch {
+    // silently skip; placeholder stays empty
+  }
+}
+
+function buildCard(s, opts) {
+  opts = opts || {};
+  const archived = !!opts.archived;
+  const card = document.createElement("div");
+  card.className = "sub-card" + (archived ? " is-archived" : "");
+  const statusVal = normalizeStatus(s.status);
+  card.innerHTML =
+    ('<div class="sub-photo" data-photo-id="' + s.id + '"></div>') +
+    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + '</span></div>' +
+    '<div class="sub-links">' +
+      (s.cv ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "—") +
+      (s.showreel ? '<a href="' + s.showreel + '" target="_blank">Showreel</a>' : "") +
+    '</div>' +
+    '<div class="sub-note">' + (s.availability || "—") + '</div>' +
+    '<div class="sub-note">' + (s.note || "—") + '</div>' +
+    (archived ? "" :
+      '<select class="' + statusVal + '" data-id="' + s.id + '">' +
+        '<option value="oui"' + (statusVal === "oui" ? " selected" : "") + '>Oui</option>' +
+        '<option value="peutetre"' + (statusVal === "peutetre" ? " selected" : "") + '>Peut-être</option>' +
+        '<option value="non"' + (statusVal === "non" ? " selected" : "") + '>Non</option>' +
+      '</select>' +
+      '<button class="archive-btn">Archiver</button>' +
+      '<button class="edit-toggle-btn">Modifier</button>'
+    ) +
+    (archived ?
+      '<div class="archive-actions">' +
+        '<button class="restore-btn">Restaurer</button>' +
+        '<button class="delete-btn">Supprimer définitivement</button>' +
+      '</div>' : ""
+    ) +
+    (archived ? "" :
+      '<div class="edit-row">' +
+        '<div><label>Nom</label><input type="text" class="edit-name" value="' + escapeHtml(s.name) + '"></div>' +
+        '<div><label>Agence</label><input type="text" class="edit-agency" value="' + escapeHtml(s.agency || "") + '"></div>' +
+        '<div><label>Email</label><input type="email" class="edit-email" value="' + escapeHtml(s.email || "") + '"></div>' +
+        '<div><label>Deuxième email</label><input type="email" class="edit-email2" value="' + escapeHtml(s.email2 || "") + '"></div>' +
+        '<div><label>Lien CV / fiche</label><input type="text" class="edit-cv" value="' + escapeHtml(s.cv || "") + '"></div>' +
+        '<div><label>Lien showreel</label><input type="text" class="edit-showreel" value="' + escapeHtml(s.showreel || "") + '"></div>' +
+        '<div class="full"><label>Disponibilités</label><input type="text" class="edit-availability" value="' + escapeHtml(s.availability || "") + '"></div>' +
+        '<div class="full"><label>Note</label><textarea class="edit-note">' + escapeHtml(s.note || "") + '</textarea></div>' +
+        '<div class="full edit-actions">' +
+          '<button class="edit-save-btn">Enregistrer les modifications</button>' +
+          '<button class="edit-cancel-btn">Annuler</button>' +
+          '<span class="edit-msg"></span>' +
+        '</div>' +
+      '</div>'
+    ) +
+    (archived ? "" :
+      '<div class="scene-row">' +
+        '<label>Scène + consignes</label>' +
+        '<button class="scene-btn">📤 Envoyer par email</button>' +
+        '<span class="scene-sent">' + (s.sceneSentAt ? "Envoyé le " + new Date(s.sceneSentAt).toLocaleDateString("fr-FR") : "") + '</span>' +
+      '</div>'
+    ) +
+    '<div class="vimeo-row">' +
+      '<label>Essai (Vimeo)</label>' +
+      '<input type="text" class="vimeo-input" placeholder="https://vimeo.com/..." value="' + (s.vimeo || "") + '">' +
+      '<button class="vimeo-save">Enregistrer</button>' +
+      '<span class="vimeo-saved-msg"></span>' +
+    '</div>' +
+    '<div class="photo-row">' +
+      '<label>Photo</label>' +
+      '<input type="file" class="photo-input" accept="image/jpeg,image/png,image/jpg">' +
+      '<button class="photo-save">Enregistrer</button>' +
+      '<span class="photo-saved-msg"></span>' +
+    '</div>' +
+    (Array.isArray(s.comments) && s.comments.length > 0 ?
+      '<div class="comments-row"><div class="label">Commentaires client</div>' +
+        s.comments.map(c =>
+          '<div class="comment-item">' + escapeHtml(c.text) +
+          '<div class="meta">' + escapeHtml(c.author) + ' — ' + new Date(c.date).toLocaleDateString("fr-FR") + '</div></div>'
+        ).join("") +
+      '</div>' : ""
+    );
+
+  if (!archived) {
+    const select = card.querySelector("select");
+    select.addEventListener("change", async () => {
+      select.className = select.value;
+      await updateField(s.id, "status", select.value);
+    });
+    const archiveBtn = card.querySelector(".archive-btn");
+    archiveBtn.addEventListener("click", async () => {
+      archiveBtn.disabled = true;
+      const ok = await updateField(s.id, "archived", true);
+      if (ok) loadData();
+      else archiveBtn.disabled = false;
+    });
+    const editToggleBtn = card.querySelector(".edit-toggle-btn");
+    const editRow = card.querySelector(".edit-row");
+    editToggleBtn.addEventListener("click", () => {
+      editRow.classList.toggle("open");
+    });
+    const editSaveBtn = card.querySelector(".edit-save-btn");
+    const editCancelBtn = card.querySelector(".edit-cancel-btn");
+    const editMsg = card.querySelector(".edit-msg");
+    editCancelBtn.addEventListener("click", () => {
+      editRow.classList.remove("open");
+    });
+    editSaveBtn.addEventListener("click", async () => {
+      const patch = {
+        name: editRow.querySelector(".edit-name").value.trim(),
+        agency: editRow.querySelector(".edit-agency").value.trim(),
+        email: editRow.querySelector(".edit-email").value.trim(),
+        email2: editRow.querySelector(".edit-email2").value.trim(),
+        cv: editRow.querySelector(".edit-cv").value.trim(),
+        showreel: editRow.querySelector(".edit-showreel").value.trim(),
+        availability: editRow.querySelector(".edit-availability").value.trim(),
+        note: editRow.querySelector(".edit-note").value.trim()
+      };
+      editSaveBtn.disabled = true;
+      editMsg.textContent = "Enregistrement...";
+      try {
+        const res = await fetch("/api/edit-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+          body: JSON.stringify({ id: s.id, patch })
+        });
+        if (!res.ok) throw new Error();
+        editMsg.textContent = "Enregistré ✓";
+        setTimeout(loadData, 600);
+      } catch {
+        editMsg.textContent = "Erreur lors de l'enregistrement.";
+        editSaveBtn.disabled = false;
+      }
+    });
+    const sceneBtn = card.querySelector(".scene-btn");
+    const sceneSentEl = card.querySelector(".scene-sent");
+    sceneBtn.addEventListener("click", async () => {
+      if (!confirm("Envoyer la scène + consignes à " + (s.email || "(aucun email)") + " pour " + s.name + " ?")) return;
+      sceneBtn.disabled = true;
+      sceneSentEl.textContent = "Envoi...";
+      const result = await sendScene(s.id);
+      if (result.ok) {
+        sceneSentEl.textContent = "Envoyé ✓";
+        setTimeout(loadData, 1200);
+      } else {
+        sceneSentEl.textContent = "Erreur : " + (result.error || "inconnue");
+        sceneBtn.disabled = false;
+      }
+    });
+  } else {
+    const restoreBtn = card.querySelector(".restore-btn");
+    restoreBtn.addEventListener("click", async () => {
+      restoreBtn.disabled = true;
+      const ok = await updateField(s.id, "archived", false);
+      if (ok) loadData();
+      else restoreBtn.disabled = false;
+    });
+    const deleteBtn = card.querySelector(".delete-btn");
+    deleteBtn.addEventListener("click", async () => {
+      if (!confirm("Supprimer définitivement la candidature de " + s.name + " ? Cette action est irréversible.")) return;
+      deleteBtn.disabled = true;
+      const ok = await deleteForever(s.id);
+      if (ok) loadData();
+      else deleteBtn.disabled = false;
+    });
+  }
+
+  const vimeoInput = card.querySelector(".vimeo-input");
+  const vimeoBtn = card.querySelector(".vimeo-save");
+  const vimeoMsg = card.querySelector(".vimeo-saved-msg");
+  vimeoBtn.addEventListener("click", async () => {
+    vimeoMsg.textContent = "...";
+    const ok = await updateField(s.id, "vimeo", vimeoInput.value);
+    vimeoMsg.textContent = ok ? "Enregistré ✓" : "Erreur";
+    setTimeout(() => { vimeoMsg.textContent = ""; }, 2000);
+  });
+
+  const photoInput = card.querySelector(".photo-input");
+  const photoBtn = card.querySelector(".photo-save");
+  const photoMsg = card.querySelector(".photo-saved-msg");
+  photoBtn.addEventListener("click", async () => {
+    const file = photoInput.files[0];
+    if (!file) {
+      photoMsg.textContent = "Choisir une photo";
+      setTimeout(() => { photoMsg.textContent = ""; }, 2000);
+      return;
+    }
+    photoMsg.textContent = "...";
+    try {
+      const dataUrl = await resizeImage(file);
+      const ok = await updateField(s.id, "photo", dataUrl);
+      photoMsg.textContent = ok ? "Enregistré ✓" : "Erreur d'enregistrement";
+      if (ok) {
+        const thumb = card.querySelector(".sub-photo");
+        if (thumb.tagName === "IMG") { thumb.src = dataUrl; }
+        else { thumb.outerHTML = '<img class="sub-photo" src="' + dataUrl + '" alt="' + s.name + '">'; }
+      }
+    } catch {
+      photoMsg.textContent = "Format non supporté (utilisez JPG ou PNG)";
+    }
+    setTimeout(() => { photoMsg.textContent = ""; }, 4000);
+  });
+
+  const photoPlaceholder = card.querySelector(".sub-photo[data-photo-id]");
+  if (photoPlaceholder) loadPhotoInto(photoPlaceholder, s.id, s.name);
+
+  return card;
+}
+
+const PAGE_SIZE = 30;
+
+function renderPaginated(group, items, role) {
+  const listEl = document.createElement("div");
+  group.appendChild(listEl);
+  let shown = 0;
+
+  const moreBtn = document.createElement("button");
+  moreBtn.className = "load-more-btn";
+
+  function renderNextBatch() {
+    const batch = items.slice(shown, shown + PAGE_SIZE);
+    batch.forEach(s => listEl.appendChild(buildCard(s)));
+    shown += batch.length;
+    if (shown < items.length) {
+      moreBtn.textContent = "Charger plus (" + (items.length - shown) + " restants)";
+      if (!moreBtn.isConnected) group.appendChild(moreBtn);
+    } else if (moreBtn.isConnected) {
+      moreBtn.remove();
+    }
+  }
+
+  moreBtn.addEventListener("click", renderNextBatch);
+  renderNextBatch();
+}
+
+function render(data) {
+  const all = data.submissions || [];
+  const active = all.filter(s => !s.archived);
+  const archived = all.filter(s => s.archived);
+
+  const statsEl = document.getElementById("stats");
+  const counts = { oui: 0, peutetre: 0, non: 0 };
+  active.forEach(s => { counts[normalizeStatus(s.status)]++; });
+  statsEl.innerHTML =
+    '<div class="stat"><div class="num">' + active.length + '</div><div class="label">Total actifs</div></div>' +
+    '<div class="stat"><div class="num">' + counts.oui + '</div><div class="label">Oui</div></div>' +
+    '<div class="stat"><div class="num">' + counts.peutetre + '</div><div class="label">Peut-être</div></div>' +
+    '<div class="stat"><div class="num">' + counts.non + '</div><div class="label">Non</div></div>';
+
+  const groupsEl = document.getElementById("groups");
+  groupsEl.innerHTML = "";
+
+  ROLES_ORDER.forEach(role => {
+    const items = active
+      .filter(s => s.role === role)
+      .sort((a, b) => {
+        const orderDiff = STATUS_ORDER.indexOf(normalizeStatus(a.status)) - STATUS_ORDER.indexOf(normalizeStatus(b.status));
+        if (orderDiff !== 0) return orderDiff;
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      });
+    const isClosed = CLOSED_ROLES.includes(role);
+    const group = document.createElement("div");
+    group.className = "role-group";
+    const header = document.createElement("div");
+    header.className = "role-group-header";
+    header.innerHTML =
+      "<h2>" + role + " (" + items.length + ")" + (isClosed ? ' <span class="role-closed-badge">FERMÉ</span>' : "") + "</h2>" +
+      '<button class="role-toggle-btn">' + (isClosed ? "Rouvrir ce rôle" : "Fermer ce rôle") + "</button>";
+    header.querySelector(".role-toggle-btn").addEventListener("click", async () => {
+      await toggleRole(role, !isClosed);
+      loadData();
+    });
+    group.appendChild(header);
+
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Aucune candidature reçue.";
+      group.appendChild(empty);
+    } else {
+      renderPaginated(group, items, role);
+    }
+    groupsEl.appendChild(group);
+  });
+
+  document.getElementById("archive-count").textContent = archived.length;
+  const archiveListEl = document.getElementById("archive-list");
+  archiveListEl.innerHTML = "";
+  if (archived.length === 0) {
+    archiveListEl.innerHTML = '<div class="empty">Aucun profil archivé.</div>';
+  } else {
+    archived
+      .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+      .forEach(s => archiveListEl.appendChild(buildCard(s, { archived: true })));
+  }
+}
+</script>
+</body>
+</html>
