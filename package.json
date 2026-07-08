@@ -1,0 +1,9 @@
+{
+  "name": "orage-casting",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "redis": "^4.7.0",
+    "pdfkit": "^0.15.0"
+  }
+}
