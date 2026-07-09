@@ -94,7 +94,7 @@ ${truncated}`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-5",
-        max_tokens: 4000,
+        max_tokens: 8000,
         messages: [{ role: "user", content: prompt }]
       })
     });
@@ -114,9 +114,24 @@ ${truncated}`;
     try {
       candidates = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
     } catch (err) {
-      console.error("JSON parse failed", rawText);
-      res.status(500).json({ error: "Impossible d'interpréter la réponse de l'IA." });
-      return;
+      // Response was likely truncated mid-array (very long candidate list).
+      // Salvage every complete {...} object found before the cut-off point.
+      const objectMatches = rawText.match(/\{[^{}]*\}/g);
+      if (objectMatches && objectMatches.length > 0) {
+        candidates = [];
+        for (const objStr of objectMatches) {
+          try {
+            candidates.push(JSON.parse(objStr));
+          } catch {
+            // skip the one broken object at the cut-off point
+          }
+        }
+      }
+      if (!candidates || candidates.length === 0) {
+        console.error("JSON parse failed", rawText);
+        res.status(500).json({ error: "Impossible d'interpréter la réponse de l'IA. Essaie avec un document plus court ou moins de comédiens à la fois." });
+        return;
+      }
     }
 
     if (!Array.isArray(candidates)) {
