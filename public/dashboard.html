@@ -72,6 +72,12 @@
   .order-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; margin-bottom: 8px; }
   .order-group-select { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 170px; }
   .order-group-new-input { background: #0a1420; border: 1px solid var(--confirme); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 150px; }
+  .import-row { background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 10px; align-items: center; }
+  .import-row input { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; color: #fff; font-size: 12px; width: 100%; }
+  .import-row label { font-size: 9px; color: var(--gray); text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .import-summary { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
+  .import-confirm-btn { background: var(--oui); border: none; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .import-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .order-name { font-weight: 700; font-size: 13px; }
   .order-role { display: block; color: var(--gray); font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
   .order-actions { display: flex; gap: 6px; }
@@ -192,6 +198,18 @@
         <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
         <button class="refresh" id="toggle-roles-panel" style="border-color:var(--confirme);color:var(--confirme);">🎭 Gérer les rôles</button>
         <button class="refresh" id="toggle-order-panel" style="border-color:var(--confirme);color:var(--confirme);">🔝 Ordre d'affichage</button>
+        <button class="refresh" id="toggle-import-panel" style="border-color:var(--oui);color:var(--oui);">📥 Importer une liste</button>
+      </div>
+
+      <div id="import-panel" class="add-profile-panel" style="display:none;">
+        <h3>Importer une liste de comédiens (PDF ou Word)</h3>
+        <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">L'IA lit le document et propose une liste à vérifier avant import définitif. Vérifie toujours les résultats — l'extraction peut comporter des erreurs.</p>
+        <div class="codes-add-row">
+          <input type="file" id="import-file-input" accept=".pdf,.doc,.docx">
+          <button id="import-analyze-btn">Analyser le document</button>
+          <span class="add-profile-msg" id="import-msg"></span>
+        </div>
+        <div id="import-preview"></div>
       </div>
 
       <div id="order-panel" class="add-profile-panel" style="display:none;">
@@ -358,6 +376,119 @@ document.getElementById("archive-toggle").addEventListener("click", () => {
   document.getElementById("archive-toggle").textContent =
     (list.classList.contains("open") ? "▾" : "▸") + " Profils archivés (" + document.getElementById("archive-count").textContent + ")";
 });
+
+document.getElementById("toggle-import-panel").addEventListener("click", () => {
+  const panel = document.getElementById("import-panel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+});
+
+let importCandidates = [];
+
+document.getElementById("import-analyze-btn").addEventListener("click", async () => {
+  const fileInput = document.getElementById("import-file-input");
+  const msg = document.getElementById("import-msg");
+  const btn = document.getElementById("import-analyze-btn");
+  const file = fileInput.files[0];
+  if (!file) {
+    msg.textContent = "Choisis d'abord un fichier.";
+    return;
+  }
+  btn.disabled = true;
+  msg.textContent = "Lecture du document...";
+  document.getElementById("import-preview").innerHTML = "";
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = () => reject(new Error("Lecture impossible"));
+      reader.readAsDataURL(file);
+    });
+    msg.textContent = "Analyse par l'IA en cours...";
+    const res = await fetch("/api/import-candidates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ fileBase64: base64, fileName: file.name })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      msg.textContent = data.error || "Erreur lors de l'analyse.";
+      btn.disabled = false;
+      return;
+    }
+    importCandidates = data.candidates || [];
+    if (importCandidates.length === 0) {
+      msg.textContent = "Aucun comédien détecté dans ce document.";
+      btn.disabled = false;
+      return;
+    }
+    msg.textContent = importCandidates.length + " comédien(s) détecté(s) — vérifie et corrige avant d'importer.";
+    renderImportPreview();
+  } catch (err) {
+    msg.textContent = (err && err.message) || "Erreur lors de l'analyse.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function renderImportPreview() {
+  const wrap = document.getElementById("import-preview");
+  wrap.innerHTML = "";
+  importCandidates.forEach((c, i) => {
+    const row = document.createElement("div");
+    row.className = "import-row";
+    row.innerHTML =
+      '<input type="checkbox" class="import-include" checked>' +
+      '<div><label>Nom</label><input type="text" class="import-name" value="' + escapeHtml(c.name || "") + '"></div>' +
+      '<div><label>Rôle</label><input type="text" class="import-role" value="' + escapeHtml(c.role || "") + '" placeholder="ex: ALEXANDRE DE CHASTENET"></div>' +
+      '<div><label>Agence</label><input type="text" class="import-agency" value="' + escapeHtml(c.agency || "") + '"></div>';
+    row.querySelector(".import-name").addEventListener("input", (e) => { importCandidates[i].name = e.target.value; });
+    row.querySelector(".import-role").addEventListener("input", (e) => { importCandidates[i].role = e.target.value; });
+    row.querySelector(".import-agency").addEventListener("input", (e) => { importCandidates[i].agency = e.target.value; });
+    row.querySelector(".import-include").addEventListener("change", (e) => { importCandidates[i]._include = e.target.checked; });
+    importCandidates[i]._include = true;
+    wrap.appendChild(row);
+  });
+  const summary = document.createElement("div");
+  summary.className = "import-summary";
+  summary.innerHTML = '<button class="import-confirm-btn">Importer les profils sélectionnés</button><span id="import-confirm-msg"></span>';
+  summary.querySelector(".import-confirm-btn").addEventListener("click", confirmImport);
+  wrap.appendChild(summary);
+}
+
+async function confirmImport() {
+  const toImport = importCandidates.filter(c => c._include && c.name && c.role);
+  const msgEl = document.getElementById("import-confirm-msg");
+  if (toImport.length === 0) {
+    msgEl.textContent = "Rien à importer (nom et rôle requis).";
+    return;
+  }
+  const btn = document.querySelector(".import-confirm-btn");
+  btn.disabled = true;
+  let done = 0, failed = 0;
+  for (const c of toImport) {
+    msgEl.textContent = "Import " + (done + failed + 1) + " / " + toImport.length + "...";
+    try {
+      const res = await fetch("/api/admin-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({
+          name: c.name, role: c.role, agency: c.agency, email: c.email,
+          email2: c.email2, cv: c.cv, showreel: c.showreel, availability: c.availability, note: c.note
+        })
+      });
+      if (res.ok) done++; else failed++;
+    } catch {
+      failed++;
+    }
+  }
+  msgEl.textContent = done + " profil(s) importé(s)" + (failed ? ", " + failed + " échec(s)" : "") + ".";
+  btn.disabled = false;
+  importCandidates = [];
+  document.getElementById("import-preview").innerHTML = "";
+  document.getElementById("import-file-input").value = "";
+  await refreshRoles();
+  loadData();
+}
 
 document.getElementById("toggle-order-panel").addEventListener("click", () => {
   const panel = document.getElementById("order-panel");
