@@ -35,6 +35,11 @@
   .role-closed-badge { background: var(--non); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; margin-left: 8px; }
   .role-toggle-btn { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .role-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
+  .role-status-select { background: #0d1826; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  .role-status-select.recherche { border-color: var(--oui); color: var(--oui); }
+  .role-status-select.shortlist { border-color: var(--peutetre); color: var(--peutetre); }
+  .role-status-select.caste { border-color: var(--confirme); color: var(--confirme); }
+  .role-status-select.ferme { border-color: var(--non); color: var(--non); }
   .sub-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 18px; margin-bottom: 10px; display: grid; grid-template-columns: 56px 1.8fr auto auto auto; gap: 14px; align-items: center; font-size: 13px; }
   .sub-details { grid-column: 1 / -1; display: none; padding-top: 10px; margin-top: 8px; border-top: 1px dashed var(--line); }
   .sub-details.open { display: block; }
@@ -271,6 +276,8 @@
 <script>
 let ROLES = [];
 let ROLES_ORDER = [];
+const ROLE_STATUS_LABELS = { recherche: "En recherche", shortlist: "Shortlist en cours", caste: "Casté (confirmé)", ferme: "Fermé" };
+const ROLE_STATUS_ORDER = ["recherche", "shortlist", "caste", "ferme"];
 const STATUS_ORDER = ["confirme", "oui", "peutetre", "non"];
 let PASSWORD = "";
 
@@ -349,8 +356,7 @@ function renderRolesList() {
     item.innerHTML =
       '<div class="rm-row1">' +
         '<span class="rm-name">' + escapeHtml(role.name) + '</span>' +
-        (role.closed ? '<span class="rm-badge">FERMÉ</span>' : '') +
-        '<button class="rm-toggle">' + (role.closed ? "Rouvrir" : "Fermer") + '</button>' +
+        buildRoleStatusSelect(role.processStatus) +
         '<button class="rm-edit-toggle">Modifier</button>' +
         '<button class="rm-delete">Supprimer</button>' +
       '</div>' +
@@ -362,10 +368,11 @@ function renderRolesList() {
         '<div class="full"><button class="rm-save">Enregistrer</button> <span class="rm-msg"></span></div>' +
       '</div>';
 
-    item.querySelector(".rm-toggle").addEventListener("click", async () => {
-      await toggleRole(role.id, !role.closed);
+    item.querySelector(".role-status-select").addEventListener("change", async (e) => {
+      const val = e.target.value;
+      e.target.className = "role-status-select " + val;
+      await setRoleProcessStatus(role.id, val);
       await refreshRoles();
-      renderRolesList();
       loadData();
     });
     item.querySelector(".rm-edit-toggle").addEventListener("click", () => {
@@ -676,17 +683,23 @@ async function deleteForever(id) {
   }
 }
 
-async function toggleRole(id, closed) {
+async function setRoleProcessStatus(id, processStatus) {
   try {
     const res = await fetch("/api/roles-edit", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
-      body: JSON.stringify({ id, patch: { closed } })
+      body: JSON.stringify({ id, patch: { processStatus } })
     });
     return res.ok;
   } catch {
     return false;
   }
+}
+
+function buildRoleStatusSelect(processStatus) {
+  return '<select class="role-status-select ' + processStatus + '">' +
+    ROLE_STATUS_ORDER.map(s => '<option value="' + s + '"' + (s === processStatus ? " selected" : "") + '>' + ROLE_STATUS_LABELS[s] + '</option>').join("") +
+    '</select>';
 }
 
 async function loadPhotoInto(placeholderEl, id, name) {
@@ -981,16 +994,18 @@ function render(data) {
         if (orderDiff !== 0) return orderDiff;
         return new Date(b.submittedAt) - new Date(a.submittedAt);
       });
-    const isClosed = !!roleObj.closed;
+    const processStatus = roleObj.processStatus || "recherche";
     const group = document.createElement("div");
     group.className = "role-group";
     const header = document.createElement("div");
     header.className = "role-group-header";
     header.innerHTML =
-      "<h2>" + role + " (" + items.length + ")" + (isClosed ? ' <span class="role-closed-badge">FERMÉ</span>' : "") + "</h2>" +
-      '<button class="role-toggle-btn">' + (isClosed ? "Rouvrir ce rôle" : "Fermer ce rôle") + "</button>";
-    header.querySelector(".role-toggle-btn").addEventListener("click", async () => {
-      await toggleRole(roleObj.id, !isClosed);
+      "<h2>" + role + " (" + items.length + ")</h2>" +
+      buildRoleStatusSelect(processStatus);
+    header.querySelector(".role-status-select").addEventListener("change", async (e) => {
+      const val = e.target.value;
+      e.target.className = "role-status-select " + val;
+      await setRoleProcessStatus(roleObj.id, val);
       loadData();
     });
     group.appendChild(header);

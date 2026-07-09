@@ -232,7 +232,7 @@ async function init() {
   }
 
   roles.forEach((role, i) => {
-    const isClosed = !!role.closed;
+    const isClosed = ["caste", "ferme"].includes(role.processStatus);
     const card = document.createElement("div");
     card.className = "role-card";
     card.innerHTML = `
@@ -245,7 +245,7 @@ async function init() {
       <div class="role-body">
         <div class="role-inner">
           <p class="desc">${role.desc || ""}</p>
-          ${isClosed ? '<p class="closed-msg">Ce rôle n\'est plus en casting. Merci de votre intérêt.</p>' : `
+          ${isClosed ? '<p class="closed-msg">' + (role.processStatus === "caste" ? "Ce rôle a été casté. Merci de votre intérêt." : "Ce rôle n'est plus en casting. Merci de votre intérêt.") + '</p>' : `
           <form data-role="${role.name}">
             <div>
               <label>Nom du comédien *</label>
