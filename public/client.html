@@ -73,19 +73,26 @@
   </div>
 
 <script>
-const ROLES_ORDER = ["ALEXANDRE DE CHASTENET", "AUGUSTIN DE CHASTENET", "BIXENTE APARRA", "LÉANDRO APARRA", "LORÉA APARRA", "VANESSA", "JO", "STÉPHANIE CRÉMIEUX", "ROMÉO GARANO", "MIKEL BASAGOITI", "RÉMI", "ESTEBAN AUDIBERT", "MATHIS", "ELIOTT BOVAL"];
+let ROLES_ORDER = [];
 
 async function load() {
   const content = document.getElementById("content");
   try {
-    const res = await fetch("/api/client-view?t=" + Date.now(), { cache: "no-store" });
-    if (!res.ok) {
+    const [rolesRes, viewRes] = await Promise.all([
+      fetch("/api/roles-status", { cache: "no-store" }),
+      fetch("/api/client-view?t=" + Date.now(), { cache: "no-store" })
+    ]);
+    if (rolesRes.ok) {
+      const rolesData = await rolesRes.json();
+      ROLES_ORDER = (rolesData.roles || []).map(r => r.name);
+    }
+    if (!viewRes.ok) {
       let detail = "";
-      try { const body = await res.json(); detail = body.error || body.detail || ""; } catch {}
-      content.innerHTML = '<div class="empty">Erreur de chargement (' + res.status + ')' + (detail ? " : " + detail : "") + '</div>';
+      try { const body = await viewRes.json(); detail = body.error || body.detail || ""; } catch {}
+      content.innerHTML = '<div class="empty">Erreur de chargement (' + viewRes.status + ')' + (detail ? " : " + detail : "") + '</div>';
       return;
     }
-    const data = await res.json();
+    const data = await viewRes.json();
     render(data.submissions || [], data.confirmed || []);
   } catch (err) {
     content.innerHTML = '<div class="empty">Erreur de chargement : ' + (err && err.message ? err.message : "inconnue") + '</div>';
@@ -136,11 +143,13 @@ async function loadPhotoIntoConfirmed(placeholderEl, id, name) {
 
 function render(all, confirmed) {
   confirmed = confirmed || [];
+  const confirmedTop = confirmed.filter(c => ROLES_ORDER.includes(c.role));
+  const confirmedOther = confirmed.filter(c => !ROLES_ORDER.includes(c.role));
   const content = document.getElementById("content");
   content.innerHTML = "";
 
-  if (confirmed.length > 0) {
-    content.appendChild(buildConfirmedSection(confirmed));
+  if (confirmedTop.length > 0) {
+    content.appendChild(buildConfirmedSection(confirmedTop));
   }
 
   if (all.length === 0 && confirmed.length === 0) {
@@ -173,6 +182,14 @@ function render(all, confirmed) {
 
     content.appendChild(group);
   });
+
+  if (confirmedOther.length > 0) {
+    const otherTitle = document.createElement("h2");
+    otherTitle.textContent = "Distribution complémentaire";
+    otherTitle.style.cssText = "font-size:15px; color:var(--green-light); text-transform:uppercase; letter-spacing:1.5px; border-bottom:1px solid var(--line); padding-bottom:10px; margin:20px 0 16px;";
+    content.appendChild(otherTitle);
+    content.appendChild(buildConfirmedSection(confirmedOther));
+  }
 }
 
 async function loadPhotoInto(placeholderEl, id, name) {

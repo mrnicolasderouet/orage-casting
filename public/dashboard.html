@@ -62,6 +62,22 @@
   .edit-toggle-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .edit-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
   .codes-add-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .role-manage-item { background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+  .role-manage-item .rm-row1 { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .role-manage-item .rm-name { font-weight: 700; flex: 1; }
+  .role-manage-item .rm-badge { font-size: 10px; background: var(--non); color: #fff; padding: 2px 8px; border-radius: 10px; }
+  .role-manage-item .rm-toggle { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .role-manage-item .rm-edit-toggle { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .role-manage-item .rm-delete { background: transparent; border: 1px solid var(--non); color: var(--non); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .role-manage-item .rm-edit-row { display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .role-manage-item .rm-edit-row.open { display: grid; }
+  .role-manage-item .rm-edit-row .full { grid-column: 1 / -1; }
+  .role-manage-item .rm-edit-row label { font-size: 10px; color: var(--gray); text-transform: uppercase; margin-bottom: 3px; display: block; }
+  .role-manage-item .rm-edit-row input, .role-manage-item .rm-edit-row textarea {
+    width: 100%; background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; color: #fff; font-size: 12.5px; font-family: inherit;
+  }
+  .role-manage-item .rm-edit-row textarea { min-height: 50px; resize: vertical; }
+  .role-manage-item .rm-save { background: var(--oui); border: none; color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
   .vimeo-input { background: #0d1826; color: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; width: 100%; }
   .vimeo-input:focus { outline: none; border-color: var(--oui); }
   .vimeo-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); }
@@ -154,6 +170,34 @@
         <button class="refresh" id="export-peutetre" style="border-color:var(--peutetre);color:var(--peutetre);">⬇ Exporter les « Peut-être » (PDF)</button>
         <button class="refresh" id="open-client" style="border-color:var(--green-light);color:var(--green-light);">↗ Ouvrir la page client</button>
         <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
+        <button class="refresh" id="toggle-roles-panel" style="border-color:var(--confirme);color:var(--confirme);">🎭 Gérer les rôles</button>
+      </div>
+
+      <div id="roles-panel" class="add-profile-panel" style="display:none;">
+        <h3>Gérer les rôles</h3>
+        <form id="create-role-form" style="margin-bottom:20px; padding-bottom:20px; border-bottom:1px dashed var(--line);">
+          <div>
+            <label>Nom du rôle *</label>
+            <input type="text" name="name" required placeholder="ex: NOUVEAU PERSONNAGE">
+          </div>
+          <div>
+            <label>Âge</label>
+            <input type="text" name="age" placeholder="ex: 30-40 ans">
+          </div>
+          <div>
+            <label>Type / job</label>
+            <input type="text" name="job" placeholder="ex: Rôle important">
+          </div>
+          <div class="full">
+            <label>Description</label>
+            <textarea name="desc" placeholder="Brief du personnage..."></textarea>
+          </div>
+          <div class="full add-profile-actions">
+            <button type="submit">Créer le rôle</button>
+            <span class="add-profile-msg" id="create-role-msg"></span>
+          </div>
+        </form>
+        <div id="roles-list"></div>
       </div>
 
       <div id="add-profile-panel" class="add-profile-panel" style="display:none;">
@@ -225,10 +269,10 @@
   </div>
 
 <script>
-const ROLES_ORDER = ["ALEXANDRE DE CHASTENET", "AUGUSTIN DE CHASTENET", "BIXENTE APARRA", "LÉANDRO APARRA", "LORÉA APARRA", "VANESSA", "JO", "STÉPHANIE CRÉMIEUX", "ROMÉO GARANO", "MIKEL BASAGOITI", "RÉMI", "ESTEBAN AUDIBERT", "MATHIS", "ELIOTT BOVAL"];
+let ROLES = [];
+let ROLES_ORDER = [];
 const STATUS_ORDER = ["confirme", "oui", "peutetre", "non"];
 let PASSWORD = "";
-let CLOSED_ROLES = [];
 
 function normalizeStatus(status) {
   if (status === "confirme") return "confirme";
@@ -285,6 +329,117 @@ document.getElementById("archive-toggle").addEventListener("click", () => {
     (list.classList.contains("open") ? "▾" : "▸") + " Profils archivés (" + document.getElementById("archive-count").textContent + ")";
 });
 
+document.getElementById("toggle-roles-panel").addEventListener("click", () => {
+  const panel = document.getElementById("roles-panel");
+  const opening = panel.style.display === "none";
+  panel.style.display = opening ? "block" : "none";
+  if (opening) renderRolesList();
+});
+
+function renderRolesList() {
+  const listEl = document.getElementById("roles-list");
+  listEl.innerHTML = "";
+  if (ROLES.length === 0) {
+    listEl.innerHTML = '<div class="empty">Aucun rôle créé pour le moment.</div>';
+    return;
+  }
+  ROLES.forEach(role => {
+    const item = document.createElement("div");
+    item.className = "role-manage-item";
+    item.innerHTML =
+      '<div class="rm-row1">' +
+        '<span class="rm-name">' + escapeHtml(role.name) + '</span>' +
+        (role.closed ? '<span class="rm-badge">FERMÉ</span>' : '') +
+        '<button class="rm-toggle">' + (role.closed ? "Rouvrir" : "Fermer") + '</button>' +
+        '<button class="rm-edit-toggle">Modifier</button>' +
+        '<button class="rm-delete">Supprimer</button>' +
+      '</div>' +
+      '<div class="rm-edit-row">' +
+        '<div><label>Nom</label><input type="text" class="rm-name-input" value="' + escapeHtml(role.name) + '"></div>' +
+        '<div><label>Âge</label><input type="text" class="rm-age-input" value="' + escapeHtml(role.age || "") + '"></div>' +
+        '<div><label>Type / job</label><input type="text" class="rm-job-input" value="' + escapeHtml(role.job || "") + '"></div>' +
+        '<div class="full"><label>Description</label><textarea class="rm-desc-input">' + escapeHtml(role.desc || "") + '</textarea></div>' +
+        '<div class="full"><button class="rm-save">Enregistrer</button> <span class="rm-msg"></span></div>' +
+      '</div>';
+
+    item.querySelector(".rm-toggle").addEventListener("click", async () => {
+      await toggleRole(role.id, !role.closed);
+      await refreshRoles();
+      renderRolesList();
+      loadData();
+    });
+    item.querySelector(".rm-edit-toggle").addEventListener("click", () => {
+      item.querySelector(".rm-edit-row").classList.toggle("open");
+    });
+    item.querySelector(".rm-delete").addEventListener("click", async () => {
+      if (!confirm('Supprimer le rôle "' + role.name + '" ? Les candidatures déjà reçues pour ce rôle resteront dans le tableau de bord, classées "hors casting".')) return;
+      await fetch("/api/roles-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: role.id })
+      });
+      await refreshRoles();
+      renderRolesList();
+      loadData();
+    });
+    item.querySelector(".rm-save").addEventListener("click", async () => {
+      const msg = item.querySelector(".rm-msg");
+      msg.textContent = "Enregistrement...";
+      const patch = {
+        name: item.querySelector(".rm-name-input").value.trim(),
+        age: item.querySelector(".rm-age-input").value.trim(),
+        job: item.querySelector(".rm-job-input").value.trim(),
+        desc: item.querySelector(".rm-desc-input").value.trim()
+      };
+      try {
+        const res = await fetch("/api/roles-edit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+          body: JSON.stringify({ id: role.id, patch })
+        });
+        if (!res.ok) throw new Error();
+        msg.textContent = "Enregistré ✓";
+        await refreshRoles();
+        setTimeout(() => { renderRolesList(); loadData(); }, 500);
+      } catch {
+        msg.textContent = "Erreur";
+      }
+    });
+
+    listEl.appendChild(item);
+  });
+}
+
+document.getElementById("create-role-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type="submit"]');
+  const msg = document.getElementById("create-role-msg");
+  const data = Object.fromEntries(new FormData(form).entries());
+  btn.disabled = true;
+  msg.textContent = "Création...";
+  try {
+    const res = await fetch("/api/roles-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || "");
+    }
+    msg.textContent = "Rôle créé ✓";
+    form.reset();
+    await refreshRoles();
+    renderRolesList();
+    loadData();
+  } catch (err) {
+    msg.textContent = (err && err.message) || "Erreur lors de la création.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 document.getElementById("toggle-add-form").addEventListener("click", () => {
   const panel = document.getElementById("add-profile-panel");
   panel.style.display = panel.style.display === "none" ? "block" : "none";
@@ -299,8 +454,14 @@ document.getElementById("cancel-add-profile").addEventListener("click", () => {
 });
 
 const addRoleSelect = document.getElementById("add-role-select");
-addRoleSelect.innerHTML = ROLES_ORDER.map(r => "<option value=\"" + r + "\">" + r + "</option>").join("") +
-  '<option value="__custom__">Autre (personnage hors casting)</option>';
+function populateAddRoleSelect() {
+  const current = addRoleSelect.value;
+  addRoleSelect.innerHTML = ROLES_ORDER.map(r => "<option value=\"" + r + "\">" + r + "</option>").join("") +
+    '<option value="__custom__">Autre (personnage hors casting)</option>';
+  if (current && [...addRoleSelect.options].some(o => o.value === current)) {
+    addRoleSelect.value = current;
+  }
+}
 
 const addRoleCustom = document.getElementById("add-role-custom");
 addRoleSelect.addEventListener("change", () => {
@@ -448,19 +609,21 @@ async function tryEnter() {
     PASSWORD = pw;
     document.getElementById("gate").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
-    await refreshClosedRoles();
+    await refreshRoles();
     render(await res.json());
   } catch {
     errEl.textContent = "Erreur de connexion.";
   }
 }
 
-async function refreshClosedRoles() {
+async function refreshRoles() {
   try {
     const res = await fetch("/api/roles-status", { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
-      CLOSED_ROLES = data.closedRoles || [];
+      ROLES = data.roles || [];
+      ROLES_ORDER = ROLES.map(r => r.name);
+      populateAddRoleSelect();
     }
   } catch {
     // keep previous value on failure
@@ -468,7 +631,7 @@ async function refreshClosedRoles() {
 }
 
 async function loadData() {
-  await refreshClosedRoles();
+  await refreshRoles();
   const res = await fetch("/api/submissions", { headers: { "x-dashboard-password": PASSWORD } });
   if (res.ok) render(await res.json());
 }
@@ -513,12 +676,12 @@ async function deleteForever(id) {
   }
 }
 
-async function toggleRole(role, closed) {
+async function toggleRole(id, closed) {
   try {
-    const res = await fetch("/api/toggle-role", {
+    const res = await fetch("/api/roles-edit", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
-      body: JSON.stringify({ role, closed })
+      body: JSON.stringify({ id, patch: { closed } })
     });
     return res.ok;
   } catch {
@@ -552,6 +715,7 @@ async function loadPhotoInto(placeholderEl, id, name) {
 function buildCard(s, opts) {
   opts = opts || {};
   const archived = !!opts.archived;
+  const isCustomRole = !ROLES_ORDER.includes(s.role);
   const card = document.createElement("div");
   card.className = "sub-card" + (archived ? " is-archived" : "");
   const statusVal = normalizeStatus(s.status);
@@ -559,12 +723,15 @@ function buildCard(s, opts) {
     ('<div class="sub-photo" data-photo-id="' + s.id + '"></div>') +
     '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + '</span></div>' +
     (archived ? "" :
+      '<div>' +
       '<select class="' + statusVal + '" data-id="' + s.id + '">' +
         '<option value="oui"' + (statusVal === "oui" ? " selected" : "") + '>Oui</option>' +
         '<option value="peutetre"' + (statusVal === "peutetre" ? " selected" : "") + '>Peut-être</option>' +
         '<option value="non"' + (statusVal === "non" ? " selected" : "") + '>Non</option>' +
         '<option value="confirme"' + (statusVal === "confirme" ? " selected" : "") + '>✓ Confirmé</option>' +
       '</select>' +
+      (isCustomRole ? '<div style="font-size:10px; color:var(--gray); max-width:120px; margin-top:4px;">Seul « Confirmé » l\'affiche côté client</div>' : "") +
+      '</div>' +
       '<button class="archive-btn">Archiver</button>'
     ) +
     (archived ?
@@ -805,7 +972,8 @@ function render(data) {
   const groupsEl = document.getElementById("groups");
   groupsEl.innerHTML = "";
 
-  ROLES_ORDER.forEach(role => {
+  ROLES.forEach(roleObj => {
+    const role = roleObj.name;
     const items = active
       .filter(s => s.role === role)
       .sort((a, b) => {
@@ -813,7 +981,7 @@ function render(data) {
         if (orderDiff !== 0) return orderDiff;
         return new Date(b.submittedAt) - new Date(a.submittedAt);
       });
-    const isClosed = CLOSED_ROLES.includes(role);
+    const isClosed = !!roleObj.closed;
     const group = document.createElement("div");
     group.className = "role-group";
     const header = document.createElement("div");
@@ -822,7 +990,7 @@ function render(data) {
       "<h2>" + role + " (" + items.length + ")" + (isClosed ? ' <span class="role-closed-badge">FERMÉ</span>' : "") + "</h2>" +
       '<button class="role-toggle-btn">' + (isClosed ? "Rouvrir ce rôle" : "Fermer ce rôle") + "</button>";
     header.querySelector(".role-toggle-btn").addEventListener("click", async () => {
-      await toggleRole(role, !isClosed);
+      await toggleRole(roleObj.id, !isClosed);
       loadData();
     });
     group.appendChild(header);
