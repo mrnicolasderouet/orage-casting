@@ -136,8 +136,7 @@ module.exports = async (req, res) => {
       doc.moveDown(0.3);
       doc.fontSize(9).fillColor(GRAY).font("Helvetica-Oblique")
         .text(
-          (roleFilter ? roleFilter + " — " : "") +
-          `${selected.length} comédien${selected.length > 1 ? "s" : ""} (${STATUS_LABELS[statusFilter]}) — généré le ${new Date().toLocaleDateString("fr-FR")}`,
+          `Généré le ${new Date().toLocaleDateString("fr-FR")}`,
           { align: "center" }
         );
       doc.moveDown(1);
