@@ -289,24 +289,33 @@ function buildCandidate(s) {
       vimeoBtn.textContent = "Chargement...";
       let embedSrc = null;
       try {
-        const oembedRes = await fetch("https://vimeo.com/api/oembed.json?url=" + encodeURIComponent(s.vimeo.trim()));
-        if (oembedRes.ok) {
-          const data = await oembedRes.json();
-          const match = /src="([^"]+)"/.exec(data.html || "");
-          if (match) embedSrc = match[1];
+        const res = await fetch("/api/resolve-vimeo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: s.vimeo.trim() })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.embedUrl) embedSrc = data.embedUrl;
         }
       } catch {
-        // fall through to direct-embed fallback below
+        // fall through to oEmbed / direct-embed fallback below
       }
-      // Fallback for link types oEmbed doesn't resolve (e.g. vimeo.com/share/... review links)
+      if (!embedSrc) {
+        try {
+          const oembedRes = await fetch("https://vimeo.com/api/oembed.json?url=" + encodeURIComponent(s.vimeo.trim()));
+          if (oembedRes.ok) {
+            const data = await oembedRes.json();
+            const match = /src="([^"]+)"/.exec(data.html || "");
+            if (match) embedSrc = match[1];
+          }
+        } catch {
+          // fall through to direct-embed fallback below
+        }
+      }
+      // Last-resort fallback for anything still unresolved
       if (!embedSrc) embedSrc = s.vimeo.trim();
       wrap.innerHTML = '<iframe src="' + embedSrc + '" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>';
-      wrap.querySelector("iframe").addEventListener("error", () => {
-        wrap.innerHTML = "";
-        vimeoBtn.style.display = "inline-block";
-        vimeoBtn.disabled = false;
-        vimeoBtn.textContent = "Vidéo indisponible";
-      });
       vimeoBtn.style.display = "none";
     });
   }
