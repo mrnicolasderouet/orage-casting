@@ -1,6 +1,7 @@
 const { getSubmission, getPhoto } = require("./_redis");
 
 function normalizeStatus(status) {
+  if (status === "confirme") return "confirme";
   if (["oui", "shortlist", "validated"].includes(status)) return "oui";
   if (["non", "rejected"].includes(status)) return "non";
   return "peutetre";
@@ -15,7 +16,8 @@ module.exports = async (req, res) => {
       return;
     }
     const sub = await getSubmission(id);
-    if (!sub || sub.archived || normalizeStatus(sub.status) !== "oui") {
+    const status = sub ? normalizeStatus(sub.status) : null;
+    if (!sub || sub.archived || (status !== "oui" && status !== "confirme")) {
       res.status(404).json({ error: "Introuvable" });
       return;
     }
