@@ -422,7 +422,7 @@ document.getElementById("import-analyze-btn").addEventListener("click", async ()
       return;
     }
     if (!res.ok) {
-      msg.textContent = data.error || "Erreur lors de l'analyse.";
+      msg.textContent = (data.error || "Erreur lors de l'analyse.") + (data.debugPreview ? " — Aperçu : " + data.debugPreview : "");
       btn.disabled = false;
       return;
     }
