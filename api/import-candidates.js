@@ -108,6 +108,14 @@ ${truncated}`;
 
     const aiData = await aiRes.json();
     const rawText = (aiData.content && aiData.content[0] && aiData.content[0].text) || "";
+    if (!rawText) {
+      console.error("Empty rawText, full aiData:", JSON.stringify(aiData));
+      res.status(500).json({
+        error: "Réponse vide ou inattendue de l'IA.",
+        debugPreview: JSON.stringify(aiData).slice(0, 800)
+      });
+      return;
+    }
     const jsonMatch = rawText.match(/\[[\s\S]*\]/);
 
     let candidates;
@@ -129,7 +137,10 @@ ${truncated}`;
       }
       if (!candidates || candidates.length === 0) {
         console.error("JSON parse failed", rawText);
-        res.status(500).json({ error: "Impossible d'interpréter la réponse de l'IA. Essaie avec un document plus court ou moins de comédiens à la fois." });
+        res.status(500).json({
+          error: "Impossible d'interpréter la réponse de l'IA. Essaie avec un document plus court ou moins de comédiens à la fois.",
+          debugPreview: rawText.slice(0, 800)
+        });
         return;
       }
     }
