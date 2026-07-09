@@ -35,6 +35,8 @@
   .role-closed-badge { background: var(--non); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; margin-left: 8px; }
   .role-toggle-btn { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .role-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
+  .role-pdf-btn { background: var(--card); border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .role-pdf-btn:hover { background: var(--peutetre); color: #fff; }
   .role-status-select { background: #0d1826; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
   .role-status-select.recherche { border-color: var(--oui); color: var(--oui); }
   .role-status-select.shortlist { border-color: var(--peutetre); color: var(--peutetre); }
@@ -750,6 +752,37 @@ async function exportDocx(status) {
   }
 }
 
+async function exportRolePdf(role) {
+  const choice = prompt('Exporter le PDF de "' + role + '" pour quel statut ?\n\nTape : oui, peutetre, confirme ou non', "oui");
+  if (!choice) return;
+  const status = choice.trim().toLowerCase();
+  if (!["oui", "peutetre", "confirme", "non"].includes(status)) {
+    alert('Statut non reconnu. Tape exactement : oui, peutetre, confirme ou non.');
+    return;
+  }
+  try {
+    const res = await fetch("/api/export?status=" + status + "&role=" + encodeURIComponent(role), {
+      headers: { "x-dashboard-password": PASSWORD }
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert("Erreur export : " + (body.error || res.status));
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ORAGE_" + role.replace(/[^A-Za-z0-9]+/g, "_") + "_" + status + "_" + new Date().toISOString().slice(0, 10) + ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert("Erreur lors de l'export.");
+  }
+}
+
 async function tryEnter() {
   const pw = document.getElementById("pw").value;
   const errEl = document.getElementById("gate-err");
@@ -1155,7 +1188,11 @@ function render(data) {
     header.className = "role-group-header";
     header.innerHTML =
       "<h2>" + role + " (" + items.length + ")</h2>" +
+      '<button class="role-pdf-btn" title="Exporter les Oui de ce rôle en PDF">⬇ PDF</button>' +
       buildRoleStatusSelect(processStatus);
+    header.querySelector(".role-pdf-btn").addEventListener("click", () => {
+      exportRolePdf(role);
+    });
     header.querySelector(".role-status-select").addEventListener("change", async (e) => {
       const val = e.target.value;
       e.target.className = "role-status-select " + val;
