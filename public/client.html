@@ -49,6 +49,8 @@
   }
   .vimeo-play-btn:hover:not(:disabled) { background: var(--green); color: #fff; }
   .vimeo-play-btn:disabled { opacity: 0.6; cursor: default; }
+  .vimeo-fallback-link { color: var(--gray); text-decoration: none; font-size: 12px; align-self: center; }
+  .vimeo-fallback-link:hover { color: var(--green-light); text-decoration: underline; }
   .vimeo-embed-wrap { margin-bottom: 14px; }
   .vimeo-embed-wrap iframe { width: 100%; aspect-ratio: 16/9; border-radius: 8px; display: block; }
   .pending-tag { color: var(--gray); font-size: 12.5px; font-style: italic; padding: 6px 0; }
@@ -265,7 +267,7 @@ function buildCandidate(s) {
       '<div class="candidate-links">' +
         (s.cv && /^https?:\/\//i.test(s.cv.trim()) ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "") +
         (s.showreel && /^https?:\/\//i.test(s.showreel.trim()) ? '<a href="' + s.showreel + '" target="_blank">Showreel</a>' : "") +
-        (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<button class="vimeo-play-btn">▶ Voir l\'essai</button>' : '<span class="pending-tag">Essais ou selftape en cours</span>') +
+        (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<button class="vimeo-play-btn">▶ Voir l\'essai</button><a class="vimeo-fallback-link" href="' + s.vimeo + '" target="_blank">↗ Ouvrir dans Vimeo</a>' : '<span class="pending-tag">Essais ou selftape en cours</span>') +
       '</div>' +
       (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<div class="vimeo-embed-wrap"></div>' : "") +
       '<div class="comments">' +
@@ -285,18 +287,27 @@ function buildCandidate(s) {
       const wrap = el.querySelector(".vimeo-embed-wrap");
       vimeoBtn.disabled = true;
       vimeoBtn.textContent = "Chargement...";
+      let embedSrc = null;
       try {
         const oembedRes = await fetch("https://vimeo.com/api/oembed.json?url=" + encodeURIComponent(s.vimeo.trim()));
-        if (!oembedRes.ok) throw new Error();
-        const data = await oembedRes.json();
-        const match = /src="([^"]+)"/.exec(data.html || "");
-        if (!match) throw new Error();
-        wrap.innerHTML = '<iframe src="' + match[1] + '" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>';
-        vimeoBtn.style.display = "none";
+        if (oembedRes.ok) {
+          const data = await oembedRes.json();
+          const match = /src="([^"]+)"/.exec(data.html || "");
+          if (match) embedSrc = match[1];
+        }
       } catch {
-        vimeoBtn.disabled = false;
-        vimeoBtn.textContent = "Vidéo indisponible — réessayer";
+        // fall through to direct-embed fallback below
       }
+      // Fallback for link types oEmbed doesn't resolve (e.g. vimeo.com/share/... review links)
+      if (!embedSrc) embedSrc = s.vimeo.trim();
+      wrap.innerHTML = '<iframe src="' + embedSrc + '" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>';
+      wrap.querySelector("iframe").addEventListener("error", () => {
+        wrap.innerHTML = "";
+        vimeoBtn.style.display = "inline-block";
+        vimeoBtn.disabled = false;
+        vimeoBtn.textContent = "Vidéo indisponible";
+      });
+      vimeoBtn.style.display = "none";
     });
   }
 
