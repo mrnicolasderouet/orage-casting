@@ -2,16 +2,19 @@ const { listSubmissions, getPhoto } = require("./_redis");
 const PDFDocument = require("pdfkit");
 
 const GREEN = "#1A6B3C";
+const GREEN_L = "#2F9A5B";
 const DARK = "#0D1B2A";
 const GRAY = "#555555";
 
 const STATUS_LABELS = {
   oui: "Oui",
   peutetre: "Peut-être",
-  non: "Non"
+  non: "Non",
+  confirme: "Confirmé"
 };
 
 function normalizeStatus(status) {
+  if (status === "confirme") return "confirme";
   if (["oui", "shortlist", "validated"].includes(status)) return "oui";
   if (["non", "rejected"].includes(status)) return "non";
   return "peutetre";
@@ -40,6 +43,21 @@ function infoLine(doc, label, value, x, y, labelWidth, valueWidth) {
   doc.fontSize(9).fillColor("#222222").font("Helvetica").text(value || "—", x + labelWidth, y, { width: valueWidth });
 }
 
+function drawRoleHeader(doc, roleName, count) {
+  const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  if (doc.y > doc.page.height - doc.page.margins.bottom - 100) {
+    doc.addPage();
+  }
+  const y = doc.y;
+  const barH = 28;
+  doc.rect(doc.page.margins.left, y, pageWidth, barH).fill(GREEN);
+  doc.fontSize(13).fillColor("#FFFFFF").font("Helvetica-Bold")
+    .text(roleName.toUpperCase(), doc.page.margins.left + 12, y + 7, { width: pageWidth - 140, continued: false });
+  doc.fontSize(9).fillColor("#FFFFFF").font("Helvetica")
+    .text(count + " comédien" + (count > 1 ? "s" : ""), doc.page.margins.left, y + 9, { width: pageWidth - 12, align: "right" });
+  doc.y = y + barH + 14;
+}
+
 async function drawCandidate(doc, sub, index) {
   const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const startY = doc.y;
@@ -49,14 +67,13 @@ async function drawCandidate(doc, sub, index) {
   }
   const y = doc.y;
 
-  doc.fontSize(13).fillColor(GREEN).font("Helvetica-Bold")
+  doc.fontSize(13).fillColor(GREEN_L).font("Helvetica-Bold")
     .text(`${String(index + 1).padStart(2, "0")} — `, doc.page.margins.left, y, { continued: true });
-  doc.fillColor(DARK).text(sub.name, { continued: true });
-  doc.fontSize(10).fillColor(GRAY).font("Helvetica-Oblique").text(`   (${sub.role})`);
+  doc.fillColor(DARK).text(sub.name);
 
   doc.moveTo(doc.page.margins.left, doc.y + 2)
     .lineTo(doc.page.margins.left + pageWidth, doc.y + 2)
-    .strokeColor(GREEN).lineWidth(1.2).stroke();
+    .strokeColor("#DDDDDD").lineWidth(1).stroke();
 
   doc.moveDown(0.6);
   const blockTop = doc.y;
@@ -109,36 +126,50 @@ module.exports = async (req, res) => {
   }
   try {
     const statusFilter = (req.query && req.query.status) || "oui";
+    const roleFilter = req.query && req.query.role ? decodeURIComponent(req.query.role) : null;
     const all = await listSubmissions();
     const selected = all
       .filter(s => !s.archived && normalizeStatus(s.status) === statusFilter)
+      .filter(s => !roleFilter || s.role === roleFilter)
       .sort((a, b) => a.role.localeCompare(b.role) || new Date(a.submittedAt) - new Date(b.submittedAt));
 
     const buffer = await generatePdfBuffer(async (doc) => {
       doc.fontSize(30).fillColor(DARK).font("Helvetica-Bold")
         .text("ORAGE", { align: "center" });
-      doc.moveDown(0.2);
-      doc.fontSize(12).fillColor(GREEN).font("Helvetica-Bold")
+      doc.moveDown(0.3);
+      doc.fontSize(9).fillColor(GRAY).font("Helvetica-Oblique")
         .text(
-          statusFilter === "oui" ? "PROPOSITION DE CASTING — COMÉDIENS RETENUS" : `COMÉDIENS — ${STATUS_LABELS[statusFilter].toUpperCase()}`,
+          (roleFilter ? roleFilter + " — " : "") +
+          `${selected.length} comédien${selected.length > 1 ? "s" : ""} (${STATUS_LABELS[statusFilter]}) — généré le ${new Date().toLocaleDateString("fr-FR")}`,
           { align: "center" }
         );
-      doc.moveDown(0.4);
-      doc.fontSize(9).fillColor(GRAY).font("Helvetica-Oblique")
-        .text(`${selected.length} comédien${selected.length > 1 ? "s" : ""} — généré le ${new Date().toLocaleDateString("fr-FR")}`, { align: "left" });
-      doc.moveDown(0.8);
+      doc.moveDown(1);
 
       if (selected.length === 0) {
         doc.fontSize(11).fillColor(GRAY).font("Helvetica").text("Aucun comédien dans cette catégorie.");
       } else {
+        let currentRole = null;
+        // Pre-compute counts per role for the section headers
+        const counts = {};
+        selected.forEach(s => { counts[s.role] = (counts[s.role] || 0) + 1; });
+
+        let indexInRole = 0;
         for (let i = 0; i < selected.length; i++) {
-          await drawCandidate(doc, selected[i], i);
+          const sub = selected[i];
+          if (sub.role !== currentRole) {
+            currentRole = sub.role;
+            indexInRole = 0;
+            drawRoleHeader(doc, currentRole, counts[currentRole]);
+          }
+          await drawCandidate(doc, sub, indexInRole);
+          indexInRole++;
         }
       }
     });
 
+    const filenameParts = ["ORAGE", roleFilter ? roleFilter.replace(/[^A-Za-z0-9]+/g, "_") : null, statusFilter, new Date().toISOString().slice(0, 10)].filter(Boolean);
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="ORAGE_${statusFilter}_${new Date().toISOString().slice(0, 10)}.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${filenameParts.join("_")}.pdf"`);
     res.status(200).send(buffer);
   } catch (err) {
     console.error(err);
