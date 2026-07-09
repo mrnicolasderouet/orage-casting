@@ -43,7 +43,7 @@ function infoLine(doc, label, value, x, y, labelWidth, valueWidth) {
   doc.fontSize(9).fillColor("#222222").font("Helvetica").text(value || "—", x + labelWidth, y, { width: valueWidth });
 }
 
-function drawRoleHeader(doc, roleName, count) {
+function drawRoleHeader(doc, roleName) {
   const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   if (doc.y > doc.page.height - doc.page.margins.bottom - 100) {
     doc.addPage();
@@ -52,9 +52,7 @@ function drawRoleHeader(doc, roleName, count) {
   const barH = 28;
   doc.rect(doc.page.margins.left, y, pageWidth, barH).fill(GREEN);
   doc.fontSize(13).fillColor("#FFFFFF").font("Helvetica-Bold")
-    .text(roleName.toUpperCase(), doc.page.margins.left + 12, y + 7, { width: pageWidth - 140, continued: false });
-  doc.fontSize(9).fillColor("#FFFFFF").font("Helvetica")
-    .text(count + " comédien" + (count > 1 ? "s" : ""), doc.page.margins.left, y + 9, { width: pageWidth - 12, align: "right" });
+    .text(roleName.toUpperCase(), doc.page.margins.left + 12, y + 7, { width: pageWidth - 24 });
   doc.y = y + barH + 14;
 }
 
@@ -102,9 +100,7 @@ async function drawCandidate(doc, sub, index) {
     ["Showreel", sub.showreel],
     ...(sub.vimeo ? [["Essai (Vimeo)", sub.vimeo]] : []),
     ["Disponibilités", sub.availability],
-    ["Note", sub.note],
-    ["Statut", STATUS_LABELS[normalizeStatus(sub.status)]],
-    ["Soumis le", new Date(sub.submittedAt).toLocaleDateString("fr-FR")]
+    ["Note", sub.note]
   ];
   rows.forEach(([label, value]) => {
     infoLine(doc, label, value, textX, ly, labelW, valueW);
@@ -128,10 +124,11 @@ module.exports = async (req, res) => {
     const statusFilter = (req.query && req.query.status) || "oui";
     const roleFilter = req.query && req.query.role ? decodeURIComponent(req.query.role) : null;
     const all = await listSubmissions();
+    const firstName = (name) => (name || "").trim().split(/\s+/)[0] || "";
     const selected = all
       .filter(s => !s.archived && normalizeStatus(s.status) === statusFilter)
       .filter(s => !roleFilter || s.role === roleFilter)
-      .sort((a, b) => a.role.localeCompare(b.role) || new Date(a.submittedAt) - new Date(b.submittedAt));
+      .sort((a, b) => a.role.localeCompare(b.role) || firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" }));
 
     const buffer = await generatePdfBuffer(async (doc) => {
       doc.fontSize(30).fillColor(DARK).font("Helvetica-Bold")
@@ -149,17 +146,13 @@ module.exports = async (req, res) => {
         doc.fontSize(11).fillColor(GRAY).font("Helvetica").text("Aucun comédien dans cette catégorie.");
       } else {
         let currentRole = null;
-        // Pre-compute counts per role for the section headers
-        const counts = {};
-        selected.forEach(s => { counts[s.role] = (counts[s.role] || 0) + 1; });
-
         let indexInRole = 0;
         for (let i = 0; i < selected.length; i++) {
           const sub = selected[i];
           if (sub.role !== currentRole) {
             currentRole = sub.role;
             indexInRole = 0;
-            drawRoleHeader(doc, currentRole, counts[currentRole]);
+            drawRoleHeader(doc, currentRole);
           }
           await drawCandidate(doc, sub, indexInRole);
           indexInRole++;
