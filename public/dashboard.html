@@ -67,6 +67,14 @@
   .edit-toggle-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .edit-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
   .codes-add-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .order-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; margin-bottom: 8px; }
+  .order-group-input { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 160px; }
+  .order-name { font-weight: 700; font-size: 13px; }
+  .order-role { display: block; color: var(--gray); font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .order-actions { display: flex; gap: 6px; }
+  .order-actions button { background: var(--card); border: 1px solid var(--line); color: var(--gray); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .order-actions button:hover:not(:disabled) { color: #fff; border-color: var(--green-light); }
+  .order-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
   .role-manage-item { background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
   .role-manage-item .rm-row1 { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
   .role-manage-item .rm-name { font-weight: 700; flex: 1; }
@@ -176,6 +184,13 @@
         <button class="refresh" id="open-client" style="border-color:var(--green-light);color:var(--green-light);">↗ Ouvrir la page client</button>
         <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
         <button class="refresh" id="toggle-roles-panel" style="border-color:var(--confirme);color:var(--confirme);">🎭 Gérer les rôles</button>
+        <button class="refresh" id="toggle-order-panel" style="border-color:var(--confirme);color:var(--confirme);">🔝 Ordre d'affichage</button>
+      </div>
+
+      <div id="order-panel" class="add-profile-panel" style="display:none;">
+        <h3>Ordre d'affichage — page client</h3>
+        <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">Contrôle l'ordre des comédiens confirmés affichés en haut de la page client. Les flèches déplacent un comédien vers le haut ou le bas.</p>
+        <div id="order-list"></div>
       </div>
 
       <div id="roles-panel" class="add-profile-panel" style="display:none;">
@@ -276,6 +291,7 @@
 <script>
 let ROLES = [];
 let ROLES_ORDER = [];
+let LAST_SUBMISSIONS = [];
 const ROLE_STATUS_LABELS = { recherche: "En recherche", shortlist: "Shortlist en cours", caste: "Casté (confirmé)", ferme: "Fermé" };
 const ROLE_STATUS_ORDER = ["recherche", "shortlist", "caste", "ferme"];
 const STATUS_ORDER = ["confirme", "oui", "peutetre", "non"];
@@ -335,6 +351,69 @@ document.getElementById("archive-toggle").addEventListener("click", () => {
   document.getElementById("archive-toggle").textContent =
     (list.classList.contains("open") ? "▾" : "▸") + " Profils archivés (" + document.getElementById("archive-count").textContent + ")";
 });
+
+document.getElementById("toggle-order-panel").addEventListener("click", () => {
+  const panel = document.getElementById("order-panel");
+  const opening = panel.style.display === "none";
+  panel.style.display = opening ? "block" : "none";
+  if (opening) renderOrderPanel();
+});
+
+function renderOrderPanel() {
+  const listEl = document.getElementById("order-list");
+  listEl.innerHTML = "";
+  let items = LAST_SUBMISSIONS.filter(s => !s.archived && normalizeStatus(s.status) === "confirme" && ROLES_ORDER.includes(s.role));
+  items.sort((a, b) => {
+    const oa = (a.displayOrder !== undefined && a.displayOrder !== null) ? a.displayOrder : 999999;
+    const ob = (b.displayOrder !== undefined && b.displayOrder !== null) ? b.displayOrder : 999999;
+    if (oa !== ob) return oa - ob;
+    return a.name.localeCompare(b.name, "fr");
+  });
+  items.forEach((s, i) => { if (s.displayOrder === undefined || s.displayOrder === null) s.displayOrder = i; });
+
+  if (items.length === 0) {
+    listEl.innerHTML = '<div class="empty">Aucun comédien confirmé pour tes rôles habituels pour le moment.</div>';
+    return;
+  }
+
+  items.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "order-item";
+    row.innerHTML =
+      '<span class="order-name">' + escapeHtml(s.name) + '<span class="order-role">' + escapeHtml(s.role) + '</span></span>' +
+      '<input type="text" class="order-group-input" placeholder="Groupe (ex: Famille Chastenet)" value="' + escapeHtml(s.displayGroup || "") + '">' +
+      '<div class="order-actions">' +
+        '<button class="order-up"' + (i === 0 ? " disabled" : "") + '>▲</button>' +
+        '<button class="order-down"' + (i === items.length - 1 ? " disabled" : "") + '>▼</button>' +
+      '</div>';
+    row.querySelector(".order-group-input").addEventListener("blur", async (e) => {
+      const val = e.target.value.trim();
+      s.displayGroup = val;
+      await updateField(s.id, "displayGroup", val);
+    });
+    row.querySelector(".order-up").addEventListener("click", async () => {
+      if (i === 0) return;
+      const other = items[i - 1];
+      const tmp = s.displayOrder;
+      await updateField(s.id, "displayOrder", other.displayOrder);
+      await updateField(other.id, "displayOrder", tmp);
+      s.displayOrder = other.displayOrder;
+      other.displayOrder = tmp;
+      renderOrderPanel();
+    });
+    row.querySelector(".order-down").addEventListener("click", async () => {
+      if (i === items.length - 1) return;
+      const other = items[i + 1];
+      const tmp = s.displayOrder;
+      await updateField(s.id, "displayOrder", other.displayOrder);
+      await updateField(other.id, "displayOrder", tmp);
+      s.displayOrder = other.displayOrder;
+      other.displayOrder = tmp;
+      renderOrderPanel();
+    });
+    listEl.appendChild(row);
+  });
+}
 
 document.getElementById("toggle-roles-panel").addEventListener("click", () => {
   const panel = document.getElementById("roles-panel");
@@ -969,6 +1048,7 @@ function renderPaginated(group, items, role) {
 
 function render(data) {
   const all = data.submissions || [];
+  LAST_SUBMISSIONS = all;
   const active = all.filter(s => !s.archived);
   const archived = all.filter(s => s.archived);
 
@@ -1034,7 +1114,21 @@ function render(data) {
     group.className = "role-group";
     const header = document.createElement("div");
     header.className = "role-group-header";
-    header.innerHTML = "<h2>" + role + " (" + items.length + ") <span style=\"color:var(--gray); font-weight:400; font-size:11px; text-transform:none;\">— hors casting</span></h2>";
+    header.innerHTML =
+      "<h2>" + role + " <span style=\"color:var(--gray); font-weight:400; font-size:11px; text-transform:none;\">— hors casting (" + items.length + ")</span></h2>" +
+      '<button class="role-toggle-btn promote-role-btn">Gérer ce rôle</button>';
+    header.querySelector(".promote-role-btn").addEventListener("click", async () => {
+      const btn = header.querySelector(".promote-role-btn");
+      btn.disabled = true;
+      btn.textContent = "...";
+      await fetch("/api/roles-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ name: role, job: "Hors casting", processStatus: "ferme" })
+      });
+      await refreshRoles();
+      loadData();
+    });
     group.appendChild(header);
     renderPaginated(group, items, role);
     groupsEl.appendChild(group);

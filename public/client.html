@@ -14,7 +14,8 @@
   .wrap { max-width: 960px; margin: 0 auto; padding: 56px 24px 80px; }
   h1 { text-align: center; font-size: 46px; margin: 0 0 6px; letter-spacing: 1px; font-weight: 800; }
   .confirmed-section { margin-bottom: 40px; }
-  .confirmed-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .confirmed-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+  .confirmed-group-label { text-align: center; color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
   .confirmed-card { text-align: center; width: 130px; }
   .confirmed-photo { width: 130px; height: 172px; object-fit: cover; border-radius: 10px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,0.4); display: block; margin-bottom: 8px; }
   .confirmed-name { font-size: 14px; font-weight: 800; }
@@ -106,21 +107,51 @@ function firstName(fullName) {
 function buildConfirmedSection(confirmed) {
   const section = document.createElement("div");
   section.className = "confirmed-section";
-  const items = [...confirmed].sort((a, b) => firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" }));
-  const grid = document.createElement("div");
-  grid.className = "confirmed-grid";
-  items.forEach(s => {
-    const card = document.createElement("div");
-    card.className = "confirmed-card";
-    card.innerHTML =
-      '<div class="confirmed-photo" data-photo-id="' + s.id + '"></div>' +
-      '<div class="confirmed-name">' + escapeHtml(s.name) + '</div>' +
-      '<div class="confirmed-role">' + escapeHtml(s.role) + '</div>';
-    grid.appendChild(card);
-    const ph = card.querySelector(".confirmed-photo");
-    loadPhotoIntoConfirmed(ph, s.id, s.name);
+  const items = [...confirmed].sort((a, b) => {
+    const oa = (a.displayOrder !== undefined && a.displayOrder !== null) ? a.displayOrder : null;
+    const ob = (b.displayOrder !== undefined && b.displayOrder !== null) ? b.displayOrder : null;
+    if (oa !== null && ob !== null) return oa - ob;
+    if (oa !== null) return -1;
+    if (ob !== null) return 1;
+    return firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" });
   });
-  section.appendChild(grid);
+
+  const groups = [];
+  const groupMap = new Map();
+  items.forEach(s => {
+    const label = s.displayGroup && s.displayGroup.trim() ? s.displayGroup.trim() : null;
+    const key = label || ("__solo__" + s.id);
+    if (!groupMap.has(key)) {
+      const g = { label, items: [] };
+      groupMap.set(key, g);
+      groups.push(g);
+    }
+    groupMap.get(key).items.push(s);
+  });
+
+  groups.forEach(g => {
+    if (g.label) {
+      const labelEl = document.createElement("div");
+      labelEl.className = "confirmed-group-label";
+      labelEl.textContent = g.label;
+      section.appendChild(labelEl);
+    }
+    const grid = document.createElement("div");
+    grid.className = "confirmed-grid";
+    g.items.forEach(s => {
+      const card = document.createElement("div");
+      card.className = "confirmed-card";
+      card.innerHTML =
+        '<div class="confirmed-photo" data-photo-id="' + s.id + '"></div>' +
+        '<div class="confirmed-name">' + escapeHtml(s.name) + '</div>' +
+        '<div class="confirmed-role">' + escapeHtml(s.role) + '</div>';
+      grid.appendChild(card);
+      const ph = card.querySelector(".confirmed-photo");
+      loadPhotoIntoConfirmed(ph, s.id, s.name);
+    });
+    section.appendChild(grid);
+  });
+
   return section;
 }
 
