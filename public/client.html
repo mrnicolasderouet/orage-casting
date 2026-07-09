@@ -11,7 +11,14 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
-  .wrap { max-width: 960px; margin: 0 auto; padding: 56px 24px 80px; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 56px 24px 80px; position: relative; }
+  .corner-logo { position: absolute; top: 32px; right: 24px; height: 56px; opacity: 0.9; }
+  .title-block { text-align: center; margin-bottom: 28px; }
+  .title-block h1 { margin-bottom: 10px; }
+  .elephant-wordmark { height: 20px; opacity: 0.9; }
+  .site-footer { text-align: center; color: var(--gray); font-size: 12px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .site-footer a { color: var(--gray); text-decoration: none; }
+  .site-footer a:hover { color: var(--green-light); text-decoration: underline; }
   h1 { text-align: center; font-size: 46px; margin: 0 0 6px; letter-spacing: 1px; font-weight: 800; }
   .confirmed-section { margin-bottom: 40px; }
   .confirmed-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
@@ -80,13 +87,16 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>ORAGE</h1>
-    <div style="display:flex; align-items:center; justify-content:center; gap:48px; margin-bottom:28px; flex-wrap:wrap;">
-      <img src="nicolas-logo.png" alt="Casting Nicolas Derouet" style="height:80px; opacity:0.9;">
-      <img src="elephant-logo.png" alt="Elephant" style="height:22px; opacity:0.9;">
+    <img src="nicolas-logo.png" alt="Nicolas Derouet Casting" class="corner-logo">
+    <div class="title-block">
+      <h1>ORAGE</h1>
+      <img src="elephant-logo.png" alt="Elephant" class="elephant-wordmark">
     </div>
     <img src="header.jpg" alt="ORAGE" style="width:100%;border-radius:12px;margin-bottom:40px;display:block;">
     <div id="content"><div class="empty">Chargement...</div></div>
+    <footer class="site-footer">
+      © Nicolas Derouet Casting — <a href="https://www.mrnicolasderouet.com" target="_blank">www.mrnicolasderouet.com</a>
+    </footer>
   </div>
 
 <script>
