@@ -8,7 +8,7 @@
   :root {
     --dark: #0d1b2a; --dark2: #0a1420; --green: #1a6b3c; --green-light: #2f9a5b;
     --gray: #8a94a3; --line: rgba(255,255,255,0.12); --card: #12233a;
-    --oui: #2f9a5b; --peutetre: #b39a3a; --non: #b3564a; --archive-c: #6b6f76;
+    --oui: #2f9a5b; --peutetre: #b39a3a; --non: #b3564a; --archive-c: #6b6f76; --confirme: #8b5cf6;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
@@ -56,6 +56,7 @@
   select.oui { border-color: var(--oui); }
   select.peutetre { border-color: var(--peutetre); }
   select.non { border-color: var(--non); }
+  select.confirme { border-color: var(--confirme); }
   .archive-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .archive-btn:hover { color: #fff; border-color: var(--archive-c); }
   .edit-toggle-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
@@ -102,6 +103,13 @@
   .add-profile-actions button[type="submit"] { background: var(--oui); border: none; color: #fff; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .add-profile-actions button[type="button"] { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 9px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; }
   .add-profile-msg { font-size: 12px; color: var(--gray); }
+  .auto-photo-row { display: flex; gap: 12px; align-items: flex-start; grid-column: 1 / -1; }
+  .auto-photo-preview { width: 60px; height: 80px; border-radius: 6px; background: #0d1826; border: 1px solid var(--line); flex-shrink: 0; overflow: hidden; }
+  .auto-photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .auto-photo-info { flex: 1; }
+  .auto-photo-status { font-size: 12px; color: var(--gray); margin-bottom: 6px; min-height: 16px; }
+  .auto-photo-status.ok { color: var(--oui); }
+  .auto-photo-status.err { color: var(--non); }
   .edit-row { grid-column: 1 / -1; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); display: none; }
   .edit-row.open { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .edit-row .full { grid-column: 1 / -1; }
@@ -153,7 +161,8 @@
         <form id="add-profile-form">
           <div>
             <label>Rôle *</label>
-            <select name="role" required id="add-role-select"></select>
+            <select name="role" id="add-role-select"></select>
+            <input type="text" name="customRole" id="add-role-custom" placeholder="Nom du personnage" style="display:none; margin-top:8px;">
           </div>
           <div>
             <label>Nom du comédien *</label>
@@ -184,8 +193,14 @@
             <input type="text" name="availability">
           </div>
           <div class="full">
-            <label>Photo (JPG ou PNG, optionnel)</label>
-            <input type="file" name="photo" accept="image/jpeg,image/png,image/jpg">
+            <label>Photo (JPG ou PNG, optionnel — recherchée automatiquement depuis le lien CV / fiche)</label>
+            <div class="auto-photo-row">
+              <div class="auto-photo-preview" id="add-photo-preview"></div>
+              <div class="auto-photo-info">
+                <div class="auto-photo-status" id="add-photo-status"></div>
+                <input type="file" name="photo" accept="image/jpeg,image/png,image/jpg">
+              </div>
+            </div>
           </div>
           <div class="full">
             <label>Note</label>
@@ -211,11 +226,12 @@
 
 <script>
 const ROLES_ORDER = ["ALEXANDRE DE CHASTENET", "AUGUSTIN DE CHASTENET", "BIXENTE APARRA", "LÉANDRO APARRA", "LORÉA APARRA", "VANESSA", "JO", "STÉPHANIE CRÉMIEUX", "ROMÉO GARANO", "MIKEL BASAGOITI", "RÉMI", "ESTEBAN AUDIBERT", "MATHIS", "ELIOTT BOVAL"];
-const STATUS_ORDER = ["oui", "peutetre", "non"];
+const STATUS_ORDER = ["confirme", "oui", "peutetre", "non"];
 let PASSWORD = "";
 let CLOSED_ROLES = [];
 
 function normalizeStatus(status) {
+  if (status === "confirme") return "confirme";
   if (["oui", "shortlist", "validated"].includes(status)) return "oui";
   if (["non", "rejected"].includes(status)) return "non";
   return "peutetre";
@@ -277,10 +293,65 @@ document.getElementById("toggle-add-form").addEventListener("click", () => {
 document.getElementById("cancel-add-profile").addEventListener("click", () => {
   document.getElementById("add-profile-panel").style.display = "none";
   document.getElementById("add-profile-form").reset();
+  document.getElementById("add-photo-status").textContent = "";
+  document.getElementById("add-photo-preview").innerHTML = "";
+  document.getElementById("add-role-custom").style.display = "none";
 });
 
 const addRoleSelect = document.getElementById("add-role-select");
-addRoleSelect.innerHTML = ROLES_ORDER.map(r => "<option value=\"" + r + "\">" + r + "</option>").join("");
+addRoleSelect.innerHTML = ROLES_ORDER.map(r => "<option value=\"" + r + "\">" + r + "</option>").join("") +
+  '<option value="__custom__">Autre (personnage hors casting)</option>';
+
+const addRoleCustom = document.getElementById("add-role-custom");
+addRoleSelect.addEventListener("change", () => {
+  const isCustom = addRoleSelect.value === "__custom__";
+  addRoleCustom.style.display = isCustom ? "block" : "none";
+  addRoleCustom.required = isCustom;
+});
+
+let addAutoPhotoData = null;
+const addForm = document.getElementById("add-profile-form");
+const addCvInput = addForm.querySelector('input[name="cv"]');
+const addPhotoFileInput = addForm.querySelector('input[type="file"]');
+const addPhotoStatus = document.getElementById("add-photo-status");
+const addPhotoPreview = document.getElementById("add-photo-preview");
+
+addCvInput.addEventListener("blur", async () => {
+  const url = addCvInput.value.trim();
+  if (!url || addPhotoFileInput.files[0]) return;
+  addPhotoStatus.textContent = "Recherche de la photo...";
+  addPhotoStatus.className = "auto-photo-status";
+  try {
+    const res = await fetch("/api/fetch-photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (data.photo) {
+      addAutoPhotoData = data.photo;
+      addPhotoStatus.textContent = "Photo trouvée automatiquement ✓";
+      addPhotoStatus.className = "auto-photo-status ok";
+      addPhotoPreview.innerHTML = '<img src="' + data.photo + '" alt="Aperçu">';
+    } else {
+      addAutoPhotoData = null;
+      addPhotoStatus.textContent = "Aucune photo trouvée automatiquement.";
+      addPhotoStatus.className = "auto-photo-status err";
+      addPhotoPreview.innerHTML = "";
+    }
+  } catch {
+    addAutoPhotoData = null;
+    addPhotoStatus.textContent = "Recherche impossible.";
+    addPhotoStatus.className = "auto-photo-status err";
+  }
+});
+
+addPhotoFileInput.addEventListener("change", () => {
+  if (addPhotoFileInput.files[0]) {
+    addPhotoStatus.textContent = "Photo manuelle sélectionnée (remplace la recherche automatique).";
+    addPhotoStatus.className = "auto-photo-status ok";
+  }
+});
 
 document.getElementById("add-profile-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -288,6 +359,14 @@ document.getElementById("add-profile-form").addEventListener("submit", async (e)
   const btn = form.querySelector('button[type="submit"]');
   const msg = form.querySelector(".add-profile-msg");
   const data = Object.fromEntries(new FormData(form).entries());
+  if (data.role === "__custom__") {
+    data.role = (data.customRole || "").trim();
+  }
+  delete data.customRole;
+  if (!data.role) {
+    msg.textContent = "Merci d'indiquer un rôle.";
+    return;
+  }
   const fileInput = form.querySelector('input[type="file"]');
   const file = fileInput.files[0];
   btn.disabled = true;
@@ -295,6 +374,8 @@ document.getElementById("add-profile-form").addEventListener("submit", async (e)
   try {
     if (file) {
       data.photo = await resizeImage(file);
+    } else if (addAutoPhotoData) {
+      data.photo = addAutoPhotoData;
     } else {
       delete data.photo;
     }
@@ -308,6 +389,9 @@ document.getElementById("add-profile-form").addEventListener("submit", async (e)
       throw new Error(body.error || "");
     }
     msg.textContent = "Profil ajouté ✓";
+    addAutoPhotoData = null;
+    addPhotoStatus.textContent = "";
+    addPhotoPreview.innerHTML = "";
     form.reset();
     setTimeout(() => {
       document.getElementById("add-profile-panel").style.display = "none";
@@ -479,6 +563,7 @@ function buildCard(s, opts) {
         '<option value="oui"' + (statusVal === "oui" ? " selected" : "") + '>Oui</option>' +
         '<option value="peutetre"' + (statusVal === "peutetre" ? " selected" : "") + '>Peut-être</option>' +
         '<option value="non"' + (statusVal === "non" ? " selected" : "") + '>Non</option>' +
+        '<option value="confirme"' + (statusVal === "confirme" ? " selected" : "") + '>✓ Confirmé</option>' +
       '</select>' +
       '<button class="archive-btn">Archiver</button>'
     ) +
@@ -708,10 +793,11 @@ function render(data) {
   const archived = all.filter(s => s.archived);
 
   const statsEl = document.getElementById("stats");
-  const counts = { oui: 0, peutetre: 0, non: 0 };
+  const counts = { confirme: 0, oui: 0, peutetre: 0, non: 0 };
   active.forEach(s => { counts[normalizeStatus(s.status)]++; });
   statsEl.innerHTML =
     '<div class="stat"><div class="num">' + active.length + '</div><div class="label">Total actifs</div></div>' +
+    '<div class="stat"><div class="num">' + counts.confirme + '</div><div class="label">Confirmé</div></div>' +
     '<div class="stat"><div class="num">' + counts.oui + '</div><div class="label">Oui</div></div>' +
     '<div class="stat"><div class="num">' + counts.peutetre + '</div><div class="label">Peut-être</div></div>' +
     '<div class="stat"><div class="num">' + counts.non + '</div><div class="label">Non</div></div>';
@@ -749,6 +835,25 @@ function render(data) {
     } else {
       renderPaginated(group, items, role);
     }
+    groupsEl.appendChild(group);
+  });
+
+  const customRoles = [...new Set(active.filter(s => !ROLES_ORDER.includes(s.role)).map(s => s.role))];
+  customRoles.forEach(role => {
+    const items = active
+      .filter(s => s.role === role)
+      .sort((a, b) => {
+        const orderDiff = STATUS_ORDER.indexOf(normalizeStatus(a.status)) - STATUS_ORDER.indexOf(normalizeStatus(b.status));
+        if (orderDiff !== 0) return orderDiff;
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      });
+    const group = document.createElement("div");
+    group.className = "role-group";
+    const header = document.createElement("div");
+    header.className = "role-group-header";
+    header.innerHTML = "<h2>" + role + " (" + items.length + ") <span style=\"color:var(--gray); font-weight:400; font-size:11px; text-transform:none;\">— hors casting</span></h2>";
+    group.appendChild(header);
+    renderPaginated(group, items, role);
     groupsEl.appendChild(group);
   });
 

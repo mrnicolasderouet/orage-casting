@@ -13,6 +13,12 @@
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
   .wrap { max-width: 960px; margin: 0 auto; padding: 56px 24px 80px; }
   h1 { text-align: center; font-size: 46px; margin: 0 0 6px; letter-spacing: 1px; font-weight: 800; }
+  .confirmed-section { margin-bottom: 40px; }
+  .confirmed-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .confirmed-card { text-align: center; width: 130px; }
+  .confirmed-photo { width: 130px; height: 172px; object-fit: cover; border-radius: 10px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,0.4); display: block; margin-bottom: 8px; }
+  .confirmed-name { font-size: 14px; font-weight: 800; }
+  .confirmed-role { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
   .role-group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 22px; overflow: hidden; }
   .role-head { display: flex; align-items: baseline; gap: 14px; padding: 20px 24px; cursor: pointer; user-select: none; }
   .role-name { font-size: 18px; font-weight: 800; flex: 1; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; }
@@ -58,9 +64,9 @@
 <body>
   <div class="wrap">
     <h1>ORAGE</h1>
-    <div style="text-align:center; margin-bottom: 28px;">
-      <img src="elephant-logo.png" alt="Elephant" style="height:22px; opacity:0.9; display:block; margin:0 auto 14px;">
-      <img src="nicolas-logo.png" alt="Casting Nicolas Derouet" style="height:80px; opacity:0.9; display:block; margin:0 auto;">
+    <div style="display:flex; align-items:center; justify-content:center; gap:48px; margin-bottom:28px; flex-wrap:wrap;">
+      <img src="nicolas-logo.png" alt="Casting Nicolas Derouet" style="height:80px; opacity:0.9;">
+      <img src="elephant-logo.png" alt="Elephant" style="height:22px; opacity:0.9;">
     </div>
     <img src="header.jpg" alt="ORAGE" style="width:100%;border-radius:12px;margin-bottom:40px;display:block;">
     <div id="content"><div class="empty">Chargement...</div></div>
@@ -80,7 +86,7 @@ async function load() {
       return;
     }
     const data = await res.json();
-    render(data.submissions || []);
+    render(data.submissions || [], data.confirmed || []);
   } catch (err) {
     content.innerHTML = '<div class="empty">Erreur de chargement : ' + (err && err.message ? err.message : "inconnue") + '</div>';
   }
@@ -90,10 +96,54 @@ function firstName(fullName) {
   return (fullName || "").trim().split(/\s+/)[0] || "";
 }
 
-function render(all) {
+function buildConfirmedSection(confirmed) {
+  const section = document.createElement("div");
+  section.className = "confirmed-section";
+  const items = [...confirmed].sort((a, b) => firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" }));
+  const grid = document.createElement("div");
+  grid.className = "confirmed-grid";
+  items.forEach(s => {
+    const card = document.createElement("div");
+    card.className = "confirmed-card";
+    card.innerHTML =
+      '<div class="confirmed-photo" data-photo-id="' + s.id + '"></div>' +
+      '<div class="confirmed-name">' + escapeHtml(s.name) + '</div>' +
+      '<div class="confirmed-role">' + escapeHtml(s.role) + '</div>';
+    grid.appendChild(card);
+    const ph = card.querySelector(".confirmed-photo");
+    loadPhotoIntoConfirmed(ph, s.id, s.name);
+  });
+  section.appendChild(grid);
+  return section;
+}
+
+async function loadPhotoIntoConfirmed(placeholderEl, id, name) {
+  try {
+    const res = await fetch("/api/client-photo?id=" + encodeURIComponent(id), { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.photo) {
+      const img = document.createElement("img");
+      img.className = "confirmed-photo";
+      img.src = data.photo;
+      img.alt = name;
+      placeholderEl.replaceWith(img);
+    }
+  } catch {
+    // silently skip
+  }
+}
+
+function render(all, confirmed) {
+  confirmed = confirmed || [];
   const content = document.getElementById("content");
   content.innerHTML = "";
-  if (all.length === 0) {
+
+  if (confirmed.length > 0) {
+    content.appendChild(buildConfirmedSection(confirmed));
+  }
+
+  if (all.length === 0 && confirmed.length === 0) {
     content.innerHTML = '<div class="empty">Aucune proposition disponible pour le moment.</div>';
     return;
   }
