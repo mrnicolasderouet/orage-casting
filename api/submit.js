@@ -1,4 +1,4 @@
-const { createSubmission, getClosedRoles, getClientIp, checkRateLimit } = require("./_redis");
+const { createSubmission, listRoles, getClientIp, checkRateLimit } = require("./_redis");
 
 const MAX_PHOTO_BASE64_LENGTH = 1.5 * 1024 * 1024;
 const MAX_SUBMISSIONS_PER_WINDOW = 20;
@@ -32,8 +32,9 @@ module.exports = async (req, res) => {
       return;
     }
     try {
-      const closedRoles = await getClosedRoles();
-      if (closedRoles.includes(role)) {
+      const roles = await listRoles();
+      const matchingRole = roles.find(r => r.name === role);
+      if (matchingRole && matchingRole.closed) {
         res.status(403).json({ error: "Ce rôle n'est plus en casting." });
         return;
       }
