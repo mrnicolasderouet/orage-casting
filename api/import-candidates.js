@@ -29,8 +29,8 @@ module.exports = async (req, res) => {
       return;
     }
     const buffer = Buffer.from(fileBase64, "base64");
-    if (buffer.length > 8 * 1024 * 1024) {
-      res.status(400).json({ error: "Fichier trop volumineux (8 Mo max)" });
+    if (buffer.length > 3 * 1024 * 1024) {
+      res.status(400).json({ error: "Fichier trop volumineux (3 Mo max)" });
       return;
     }
 
