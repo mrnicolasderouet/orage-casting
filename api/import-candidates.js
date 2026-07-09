@@ -107,7 +107,8 @@ ${truncated}`;
     }
 
     const aiData = await aiRes.json();
-    const rawText = (aiData.content && aiData.content[0] && aiData.content[0].text) || "";
+    const textBlock = (aiData.content || []).find(b => b.type === "text");
+    const rawText = (textBlock && textBlock.text) || "";
     if (!rawText) {
       console.error("Empty rawText, full aiData:", JSON.stringify(aiData));
       res.status(500).json({
