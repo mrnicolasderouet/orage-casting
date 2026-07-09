@@ -1,6 +1,6 @@
 const { updateRole } = require("./_redis");
 
-const ALLOWED_FIELDS = ["name", "age", "job", "desc", "closed", "processStatus"];
+const ALLOWED_FIELDS = ["name", "age", "job", "desc", "closed", "processStatus", "order"];
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
