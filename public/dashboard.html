@@ -393,6 +393,10 @@ document.getElementById("import-analyze-btn").addEventListener("click", async ()
     msg.textContent = "Choisis d'abord un fichier.";
     return;
   }
+  if (file.size > 3 * 1024 * 1024) {
+    msg.textContent = "Fichier trop volumineux (3 Mo max). Essaie un export allégé ou une version raccourcie du document.";
+    return;
+  }
   btn.disabled = true;
   msg.textContent = "Lecture du document...";
   document.getElementById("import-preview").innerHTML = "";
@@ -409,7 +413,14 @@ document.getElementById("import-analyze-btn").addEventListener("click", async ()
       headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
       body: JSON.stringify({ fileBase64: base64, fileName: file.name })
     });
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      msg.textContent = "Réponse du serveur invalide (fichier probablement trop volumineux pour Vercel). Essaie un fichier plus léger.";
+      btn.disabled = false;
+      return;
+    }
     if (!res.ok) {
       msg.textContent = data.error || "Erreur lors de l'analyse.";
       btn.disabled = false;
