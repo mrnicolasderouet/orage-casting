@@ -255,9 +255,9 @@ function buildCandidate(s) {
       '<div class="candidate-name">' + escapeHtml(s.name) + '</div>' +
       '<div class="candidate-agency">' + escapeHtml(s.agency || "") + '</div>' +
       '<div class="candidate-links">' +
-        (s.cv ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "") +
-        (s.showreel ? '<a href="' + s.showreel + '" target="_blank">Showreel</a>' : "") +
-        (s.vimeo && s.vimeo.trim() ? '<a href="' + s.vimeo + '" target="_blank">Essai (Vimeo)</a>' : '<span class="pending-tag">Essais ou selftape en cours</span>') +
+        (s.cv && /^https?:\/\//i.test(s.cv.trim()) ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "") +
+        (s.showreel && /^https?:\/\//i.test(s.showreel.trim()) ? '<a href="' + s.showreel + '" target="_blank">Showreel</a>' : "") +
+        (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<a href="' + s.vimeo + '" target="_blank">Essai (Vimeo)</a>' : '<span class="pending-tag">Essais ou selftape en cours</span>') +
       '</div>' +
       '<div class="comments">' +
         comments +
