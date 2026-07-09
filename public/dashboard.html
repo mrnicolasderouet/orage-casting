@@ -477,14 +477,31 @@ async function confirmImport() {
   btn.disabled = true;
   let done = 0, failed = 0;
   for (const c of toImport) {
-    msgEl.textContent = "Import " + (done + failed + 1) + " / " + toImport.length + "...";
+    msgEl.textContent = "Import " + (done + failed + 1) + " / " + toImport.length + " (" + c.name + ")...";
+    let photo = "";
+    if (c.cv && /^https?:\/\//i.test(c.cv.trim())) {
+      try {
+        const photoRes = await fetch("/api/fetch-photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: c.cv.trim() })
+        });
+        if (photoRes.ok) {
+          const photoData = await photoRes.json();
+          if (photoData.photo) photo = photoData.photo;
+        }
+      } catch {
+        // no photo found, continue without one
+      }
+    }
     try {
       const res = await fetch("/api/admin-create", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
         body: JSON.stringify({
           name: c.name, role: c.role, agency: c.agency, email: c.email,
-          email2: c.email2, cv: c.cv, showreel: c.showreel, availability: c.availability, note: c.note
+          email2: c.email2, cv: c.cv, showreel: c.showreel, availability: c.availability, note: c.note,
+          photo: photo || undefined
         })
       });
       if (res.ok) done++; else failed++;
