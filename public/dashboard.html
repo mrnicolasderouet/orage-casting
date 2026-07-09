@@ -68,7 +68,8 @@
   .edit-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
   .codes-add-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
   .order-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; margin-bottom: 8px; }
-  .order-group-input { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 160px; }
+  .order-group-select { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 170px; }
+  .order-group-new-input { background: #0a1420; border: 1px solid var(--confirme); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 150px; }
   .order-name { font-weight: 700; font-size: 13px; }
   .order-role { display: block; color: var(--gray); font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
   .order-actions { display: flex; gap: 6px; }
@@ -77,6 +78,10 @@
   .order-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
   .role-manage-item { background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
   .role-manage-item .rm-row1 { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .rm-order-actions { display: flex; flex-direction: column; gap: 2px; }
+  .rm-order-actions button { background: var(--card); border: 1px solid var(--line); color: var(--gray); width: 22px; height: 18px; border-radius: 4px; cursor: pointer; font-size: 10px; line-height: 1; padding: 0; }
+  .rm-order-actions button:hover:not(:disabled) { color: #fff; border-color: var(--green-light); }
+  .rm-order-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
   .role-manage-item .rm-name { font-weight: 700; flex: 1; }
   .role-manage-item .rm-badge { font-size: 10px; background: var(--non); color: #fff; padding: 2px 8px; border-radius: 10px; }
   .role-manage-item .rm-toggle { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
@@ -376,20 +381,49 @@ function renderOrderPanel() {
     return;
   }
 
+  const existingGroups = [...new Set(items.map(s => (s.displayGroup || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+
   items.forEach((s, i) => {
     const row = document.createElement("div");
     row.className = "order-item";
+    const currentGroup = (s.displayGroup || "").trim();
+    const groupOptions = '<option value="">Aucun groupe</option>' +
+      existingGroups.map(g => '<option value="' + escapeHtml(g) + '"' + (g === currentGroup ? " selected" : "") + '>' + escapeHtml(g) + '</option>').join("") +
+      '<option value="__new__">+ Nouveau groupe...</option>';
     row.innerHTML =
       '<span class="order-name">' + escapeHtml(s.name) + '<span class="order-role">' + escapeHtml(s.role) + '</span></span>' +
-      '<input type="text" class="order-group-input" placeholder="Groupe (ex: Famille Chastenet)" value="' + escapeHtml(s.displayGroup || "") + '">' +
+      '<select class="order-group-select">' + groupOptions + '</select>' +
+      '<input type="text" class="order-group-new-input" placeholder="Nom du nouveau groupe" style="display:none;">' +
       '<div class="order-actions">' +
         '<button class="order-up"' + (i === 0 ? " disabled" : "") + '>▲</button>' +
         '<button class="order-down"' + (i === items.length - 1 ? " disabled" : "") + '>▼</button>' +
       '</div>';
-    row.querySelector(".order-group-input").addEventListener("blur", async (e) => {
-      const val = e.target.value.trim();
+    const groupSelect = row.querySelector(".order-group-select");
+    const groupNewInput = row.querySelector(".order-group-new-input");
+    groupSelect.addEventListener("change", async () => {
+      if (groupSelect.value === "__new__") {
+        groupNewInput.style.display = "inline-block";
+        groupNewInput.focus();
+        return;
+      }
+      s.displayGroup = groupSelect.value;
+      await updateField(s.id, "displayGroup", groupSelect.value);
+      renderOrderPanel();
+    });
+    groupNewInput.addEventListener("keydown", async (e) => {
+      if (e.key !== "Enter") return;
+      const val = groupNewInput.value.trim();
+      if (!val) return;
       s.displayGroup = val;
       await updateField(s.id, "displayGroup", val);
+      renderOrderPanel();
+    });
+    groupNewInput.addEventListener("blur", async () => {
+      const val = groupNewInput.value.trim();
+      if (!val) { renderOrderPanel(); return; }
+      s.displayGroup = val;
+      await updateField(s.id, "displayGroup", val);
+      renderOrderPanel();
     });
     row.querySelector(".order-up").addEventListener("click", async () => {
       if (i === 0) return;
@@ -429,11 +463,15 @@ function renderRolesList() {
     listEl.innerHTML = '<div class="empty">Aucun rôle créé pour le moment.</div>';
     return;
   }
-  ROLES.forEach(role => {
+  ROLES.forEach((role, i) => {
     const item = document.createElement("div");
     item.className = "role-manage-item";
     item.innerHTML =
       '<div class="rm-row1">' +
+        '<div class="rm-order-actions">' +
+          '<button class="rm-order-up"' + (i === 0 ? " disabled" : "") + '>▲</button>' +
+          '<button class="rm-order-down"' + (i === ROLES.length - 1 ? " disabled" : "") + '>▼</button>' +
+        '</div>' +
         '<span class="rm-name">' + escapeHtml(role.name) + '</span>' +
         buildRoleStatusSelect(role.processStatus) +
         '<button class="rm-edit-toggle">Modifier</button>' +
@@ -447,6 +485,42 @@ function renderRolesList() {
         '<div class="full"><button class="rm-save">Enregistrer</button> <span class="rm-msg"></span></div>' +
       '</div>';
 
+    item.querySelector(".rm-order-up").addEventListener("click", async () => {
+      if (i === 0) return;
+      const other = ROLES[i - 1];
+      const tmp = role.order || 0;
+      await fetch("/api/roles-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: role.id, patch: { order: other.order || 0 } })
+      });
+      await fetch("/api/roles-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: other.id, patch: { order: tmp } })
+      });
+      await refreshRoles();
+      renderRolesList();
+      loadData();
+    });
+    item.querySelector(".rm-order-down").addEventListener("click", async () => {
+      if (i === ROLES.length - 1) return;
+      const other = ROLES[i + 1];
+      const tmp = role.order || 0;
+      await fetch("/api/roles-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: role.id, patch: { order: other.order || 0 } })
+      });
+      await fetch("/api/roles-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: other.id, patch: { order: tmp } })
+      });
+      await refreshRoles();
+      renderRolesList();
+      loadData();
+    });
     item.querySelector(".role-status-select").addEventListener("change", async (e) => {
       const val = e.target.value;
       e.target.className = "role-status-select " + val;
