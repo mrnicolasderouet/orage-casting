@@ -1,6 +1,6 @@
 const { updateRole } = require("./_redis");
 
-const ALLOWED_FIELDS = ["name", "age", "job", "desc", "closed"];
+const ALLOWED_FIELDS = ["name", "age", "job", "desc", "closed", "processStatus"];
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -25,6 +25,9 @@ module.exports = async (req, res) => {
     const cleanPatch = {};
     for (const key of Object.keys(patch)) {
       if (ALLOWED_FIELDS.includes(key)) cleanPatch[key] = patch[key];
+    }
+    if (cleanPatch.processStatus !== undefined) {
+      cleanPatch.closed = ["caste", "ferme"].includes(cleanPatch.processStatus);
     }
     if (Object.keys(cleanPatch).length === 0) {
       res.status(400).json({ error: "Aucun champ valide à modifier" });

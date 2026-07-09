@@ -166,7 +166,7 @@ async function seedDefaultRolesIfEmpty(client) {
   let order = 0;
   for (const role of DEFAULT_ROLES) {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + order;
-    await client.hSet(ROLES_KEY, id, JSON.stringify({ ...role, closed: false, order: order++ }));
+    await client.hSet(ROLES_KEY, id, JSON.stringify({ ...role, closed: false, processStatus: "recherche", order: order++ }));
   }
 }
 
@@ -175,7 +175,11 @@ async function listRoles() {
     await seedDefaultRolesIfEmpty(client);
     const raw = await client.hGetAll(ROLES_KEY);
     return Object.entries(raw)
-      .map(([id, val]) => ({ id, ...JSON.parse(val) }))
+      .map(([id, val]) => {
+        const parsed = JSON.parse(val);
+        const processStatus = parsed.processStatus || (parsed.closed ? "ferme" : "recherche");
+        return { id, ...parsed, processStatus };
+      })
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   });
 }

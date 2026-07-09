@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
     try {
       const roles = await listRoles();
       const matchingRole = roles.find(r => r.name === role);
-      if (matchingRole && matchingRole.closed) {
+      if (matchingRole && ["caste", "ferme"].includes(matchingRole.processStatus)) {
         res.status(403).json({ error: "Ce rôle n'est plus en casting." });
         return;
       }

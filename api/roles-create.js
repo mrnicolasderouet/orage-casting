@@ -26,6 +26,7 @@ module.exports = async (req, res) => {
       job: (job || "").trim(),
       desc: (desc || "").trim(),
       closed: false,
+      processStatus: "recherche",
       order: Date.now()
     });
     res.status(200).json({ ok: true, id });
