@@ -13,14 +13,21 @@
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
   .wrap { max-width: 960px; margin: 0 auto; padding: 56px 24px 80px; }
   h1 { text-align: center; font-size: 46px; margin: 0 0 6px; letter-spacing: 1px; font-weight: 800; }
-  .subtitle { text-align: center; color: var(--green-light); font-weight: 700; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 40px; }
-  .role-group { margin-bottom: 40px; }
-  .role-group h2 { font-size: 15px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 16px; }
+  .role-group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 22px; overflow: hidden; }
+  .role-head { display: flex; align-items: baseline; gap: 14px; padding: 20px 24px; cursor: pointer; user-select: none; }
+  .role-name { font-size: 18px; font-weight: 800; flex: 1; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; }
+  .role-count { color: var(--gray); font-size: 13px; }
+  .chevron { color: var(--gray); transition: transform 0.2s ease; }
+  .role-group.open .chevron { transform: rotate(180deg); }
+  .role-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+  .role-group.open .role-body { max-height: 4000px; }
+  .role-inner { padding: 0 24px 22px; }
   .candidate {
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-    padding: 20px; margin-bottom: 18px; display: grid; grid-template-columns: 140px 1fr; gap: 22px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px; margin-bottom: 16px; display: grid; grid-template-columns: 140px 1fr; gap: 22px;
   }
-  .candidate-photo { width: 140px; height: 186px; object-fit: cover; border-radius: 8px; background: #0d1826; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+  .candidate:last-child { margin-bottom: 0; }
+  .candidate-photo { width: 140px; height: 186px; object-fit: cover; border-radius: 8px; background: #0a1420; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
   .candidate-name { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
   .candidate-agency { color: var(--gray); font-size: 13px; margin-bottom: 12px; }
   .candidate-links { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -51,7 +58,7 @@
 <body>
   <div class="wrap">
     <h1>ORAGE</h1>
-    <div class="subtitle">Proposition de casting — comédiens retenus</div>
+    <img src="header.jpg" alt="ORAGE" style="width:100%;border-radius:12px;margin-bottom:40px;display:block;">
     <div id="content"><div class="empty">Chargement...</div></div>
   </div>
 
@@ -75,6 +82,10 @@ async function load() {
   }
 }
 
+function firstName(fullName) {
+  return (fullName || "").trim().split(/\s+/)[0] || "";
+}
+
 function render(all) {
   const content = document.getElementById("content");
   content.innerHTML = "";
@@ -83,12 +94,30 @@ function render(all) {
     return;
   }
   ROLES_ORDER.forEach(role => {
-    const items = all.filter(s => s.role === role);
+    const items = all
+      .filter(s => s.role === role)
+      .sort((a, b) => firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" }));
     if (items.length === 0) return;
+
     const group = document.createElement("div");
     group.className = "role-group";
-    group.innerHTML = "<h2>" + role + "</h2>";
-    items.forEach(s => group.appendChild(buildCandidate(s)));
+    const head = document.createElement("div");
+    head.className = "role-head";
+    head.innerHTML =
+      '<span class="role-name">' + role + '</span>' +
+      '<span class="role-count">' + items.length + ' comédien' + (items.length > 1 ? "s" : "") + '</span>' +
+      '<span class="chevron">▾</span>';
+    head.addEventListener("click", () => group.classList.toggle("open"));
+    group.appendChild(head);
+
+    const body = document.createElement("div");
+    body.className = "role-body";
+    const inner = document.createElement("div");
+    inner.className = "role-inner";
+    items.forEach(s => inner.appendChild(buildCandidate(s)));
+    body.appendChild(inner);
+    group.appendChild(body);
+
     content.appendChild(group);
   });
 }
