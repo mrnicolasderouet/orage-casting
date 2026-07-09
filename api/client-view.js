@@ -28,7 +28,7 @@ module.exports = async (req, res) => {
 
     const confirmed = all
       .filter(s => !s.archived && normalizeStatus(s.status) === "confirme")
-      .map(s => ({ id: s.id, role: s.role, name: s.name }))
+      .map(s => ({ id: s.id, role: s.role, name: s.name, displayOrder: s.displayOrder, displayGroup: s.displayGroup }))
       .sort((a, b) => a.role.localeCompare(b.role));
 
     res.status(200).json({ submissions: selected, confirmed });
