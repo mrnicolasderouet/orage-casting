@@ -82,6 +82,8 @@
   .import-summary { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
   .import-confirm-btn { background: var(--oui); border: none; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .import-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .import-dup-warning { color: var(--peutetre); font-size: 10.5px; margin-top: 4px; }
+  .import-dup-count { color: var(--peutetre); font-size: 12px; }
   .order-name { font-weight: 700; font-size: 13px; }
   .order-role { display: block; color: var(--gray); font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
   .order-actions { display: flex; gap: 6px; }
@@ -456,27 +458,60 @@ document.getElementById("import-analyze-btn").addEventListener("click", async ()
   }
 });
 
+function normalizeForMatch(s) {
+  return (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function findExistingDuplicate(name, role) {
+  const nName = normalizeForMatch(name);
+  const nRole = normalizeForMatch(role);
+  if (!nName || !nRole) return null;
+  return LAST_SUBMISSIONS.find(s =>
+    !s.archived &&
+    normalizeForMatch(s.name) === nName &&
+    normalizeForMatch(s.role) === nRole
+  ) || null;
+}
+
 function renderImportPreview() {
   const wrap = document.getElementById("import-preview");
   wrap.innerHTML = "";
   importCandidates.forEach((c, i) => {
     const row = document.createElement("div");
     row.className = "import-row";
+    const dup = findExistingDuplicate(c.name, c.role);
+    importCandidates[i]._include = !dup;
     row.innerHTML =
-      '<input type="checkbox" class="import-include" checked>' +
-      '<div><label>Nom</label><input type="text" class="import-name" value="' + escapeHtml(c.name || "") + '"></div>' +
+      '<input type="checkbox" class="import-include"' + (dup ? "" : " checked") + '>' +
+      '<div><label>Nom</label><input type="text" class="import-name" value="' + escapeHtml(c.name || "") + '">' +
+        (dup ? '<div class="import-dup-warning">⚠ Déjà présent pour ce rôle — décoché par défaut</div>' : "") +
+      '</div>' +
       '<div><label>Rôle</label><input type="text" class="import-role" value="' + escapeHtml(c.role || "") + '" placeholder="ex: ALEXANDRE DE CHASTENET"></div>' +
       '<div><label>Agence</label><input type="text" class="import-agency" value="' + escapeHtml(c.agency || "") + '"></div>';
-    row.querySelector(".import-name").addEventListener("input", (e) => { importCandidates[i].name = e.target.value; });
-    row.querySelector(".import-role").addEventListener("input", (e) => { importCandidates[i].role = e.target.value; });
+
+    const refreshDupState = () => {
+      const nowDup = findExistingDuplicate(importCandidates[i].name, importCandidates[i].role);
+      const warningEl = row.querySelector(".import-dup-warning");
+      if (nowDup && !warningEl) {
+        row.querySelector(".import-name").insertAdjacentHTML("afterend", '<div class="import-dup-warning">⚠ Déjà présent pour ce rôle — vérifie avant d\'inclure</div>');
+      } else if (!nowDup && warningEl) {
+        warningEl.remove();
+      }
+    };
+
+    row.querySelector(".import-name").addEventListener("input", (e) => { importCandidates[i].name = e.target.value; refreshDupState(); });
+    row.querySelector(".import-role").addEventListener("input", (e) => { importCandidates[i].role = e.target.value; refreshDupState(); });
     row.querySelector(".import-agency").addEventListener("input", (e) => { importCandidates[i].agency = e.target.value; });
     row.querySelector(".import-include").addEventListener("change", (e) => { importCandidates[i]._include = e.target.checked; });
-    importCandidates[i]._include = true;
     wrap.appendChild(row);
   });
+  const dupCount = importCandidates.filter((c, i) => findExistingDuplicate(c.name, c.role)).length;
   const summary = document.createElement("div");
   summary.className = "import-summary";
-  summary.innerHTML = '<button class="import-confirm-btn">Importer les profils sélectionnés</button><span id="import-confirm-msg"></span>';
+  summary.innerHTML =
+    '<button class="import-confirm-btn">Importer les profils sélectionnés</button>' +
+    (dupCount > 0 ? '<span class="import-dup-count">' + dupCount + ' doublon(s) potentiel(s) détecté(s) et décoché(s)</span>' : "") +
+    '<span id="import-confirm-msg"></span>';
   summary.querySelector(".import-confirm-btn").addEventListener("click", confirmImport);
   wrap.appendChild(summary);
 }
