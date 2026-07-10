@@ -30,9 +30,9 @@ module.exports = async (req, res) => {
       }
       const slots = await listSlots();
       const now = Date.now();
-      const mySlot = slots.find(s => s.bookedBy === id) || null;
-      const available = slots.filter(s => !s.blocked && !s.bookedBy && new Date(s.start).getTime() > now)
-        .map(s => ({ id: s.id, start: s.start, durationMin: s.durationMin, location: s.location }));
+      const mySlot = slots.find(s => (s.bookedIds || []).includes(id)) || null;
+      const available = slots.filter(s => !s.blocked && (s.bookedIds || []).length < (s.capacity || 1) && new Date(s.start).getTime() > now)
+        .map(s => ({ id: s.id, start: s.start, durationMin: s.durationMin, location: s.location, capacity: s.capacity || 1, taken: (s.bookedIds || []).length }));
       res.status(200).json({
         project: PROJECT_NAME,
         candidate: { name: sub.name, role: sub.role },

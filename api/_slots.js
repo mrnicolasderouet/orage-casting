@@ -1,10 +1,19 @@
 // Module de stockage des créneaux d'essais (casting présentiel).
 // Autonome : ne dépend pas de _redis.js pour rester facile à déployer.
+// Chaque créneau a une capacité (1 = solo, 2 = duo...) gérée par des "sièges" :
+// un verrou Redis SET NX par siège garantit qu'aucune sur-réservation n'est possible.
 const { createClient } = require("redis");
 
 const PREFIX = "orage";
 const SLOTS_KEY = `${PREFIX}:slots`;
-const bookLockKey = (slotId) => `${PREFIX}:slotlock:${slotId}`;
+const MAX_CAPACITY = 4;
+// Le siège 1 garde l'ancien format de clé pour rester compatible
+// avec les réservations déjà effectuées.
+const seatKey = (slotId, n) => n <= 1 ? `${PREFIX}:slotlock:${slotId}` : `${PREFIX}:slotlock:${slotId}:${n}`;
+
+function capacityOf(slot) {
+  return Math.max(1, Math.min(MAX_CAPACITY, Number(slot.capacity) || 1));
+}
 
 async function withClient(fn) {
   if (!process.env.REDIS_URL) {
@@ -22,13 +31,20 @@ async function withClient(fn) {
   }
 }
 
+async function readSeats(client, slotId, capacity) {
+  const keys = [];
+  for (let n = 1; n <= Math.max(capacity, 1); n++) keys.push(seatKey(slotId, n));
+  const vals = await client.mGet(keys);
+  return vals.filter(Boolean);
+}
+
 async function listSlots() {
   return withClient(async (client) => {
     const raw = await client.hGetAll(SLOTS_KEY);
     const slots = Object.entries(raw).map(([id, v]) => ({ id, ...JSON.parse(v) }));
-    if (slots.length > 0) {
-      const locks = await client.mGet(slots.map(s => bookLockKey(s.id)));
-      slots.forEach((s, i) => { s.bookedBy = locks[i] || ""; });
+    for (const s of slots) {
+      s.capacity = capacityOf(s);
+      s.bookedIds = await readSeats(client, s.id, s.capacity);
     }
     return slots.sort((a, b) => new Date(a.start) - new Date(b.start));
   });
@@ -38,8 +54,10 @@ async function getSlot(id) {
   return withClient(async (client) => {
     const raw = await client.hGet(SLOTS_KEY, id);
     if (!raw) return null;
-    const bookedBy = (await client.get(bookLockKey(id))) || "";
-    return { id, ...JSON.parse(raw), bookedBy };
+    const slot = { id, ...JSON.parse(raw) };
+    slot.capacity = capacityOf(slot);
+    slot.bookedIds = await readSeats(client, id, slot.capacity);
+    return slot;
   });
 }
 
@@ -52,6 +70,7 @@ async function createSlots(slotList) {
         start: slot.start,
         durationMin: Number(slot.durationMin) || 20,
         location: slot.location || "",
+        capacity: capacityOf(slot),
         blocked: false,
         createdAt: new Date().toISOString()
       };
@@ -75,12 +94,14 @@ async function patchSlot(id, patch) {
 async function deleteSlot(id) {
   return withClient(async (client) => {
     await client.hDel(SLOTS_KEY, id);
-    await client.del(bookLockKey(id));
+    for (let n = 1; n <= MAX_CAPACITY; n++) {
+      await client.del(seatKey(id, n));
+    }
   });
 }
 
-// Réservation atomique : SET NX sur une clé de verrou.
-// Impossible que deux candidats obtiennent le même créneau.
+// Réservation atomique d'un siège : SET NX. Deux candidats ne peuvent
+// jamais obtenir le même siège ; un créneau duo offre deux sièges.
 async function tryBookSlot(slotId, submissionId) {
   return withClient(async (client) => {
     const raw = await client.hGet(SLOTS_KEY, slotId);
@@ -88,30 +109,46 @@ async function tryBookSlot(slotId, submissionId) {
     const slot = JSON.parse(raw);
     if (slot.blocked) return { ok: false, error: "Ce créneau n'est pas disponible" };
     if (new Date(slot.start).getTime() < Date.now()) return { ok: false, error: "Ce créneau est déjà passé" };
-    const got = await client.set(bookLockKey(slotId), submissionId, { NX: true });
-    if (got !== "OK") return { ok: false, error: "Ce créneau vient d'être réservé par quelqu'un d'autre" };
-    return { ok: true, slot: { id: slotId, ...slot, bookedBy: submissionId } };
+    const capacity = capacityOf(slot);
+    const current = await readSeats(client, slotId, capacity);
+    if (current.includes(submissionId)) {
+      return { ok: false, error: "Ce créneau est déjà le vôtre" };
+    }
+    for (let n = 1; n <= capacity; n++) {
+      const got = await client.set(seatKey(slotId, n), submissionId, { NX: true });
+      if (got === "OK") {
+        return { ok: true, slot: { id: slotId, ...slot, capacity } };
+      }
+    }
+    return { ok: false, error: "Ce créneau est complet" };
   });
 }
 
+// Libère un siège. Sans submissionId : libère tous les sièges (action admin)
+// et renvoie la liste des candidats qui étaient réservés.
 async function releaseSlot(slotId, submissionId) {
   return withClient(async (client) => {
-    const current = await client.get(bookLockKey(slotId));
-    if (!current) return { ok: true };
-    if (submissionId && current !== submissionId) {
-      return { ok: false, error: "Ce créneau est réservé par un autre candidat" };
+    const released = [];
+    for (let n = 1; n <= MAX_CAPACITY; n++) {
+      const key = seatKey(slotId, n);
+      const val = await client.get(key);
+      if (!val) continue;
+      if (!submissionId || val === submissionId) {
+        await client.del(key);
+        released.push(val);
+        if (submissionId) break;
+      }
     }
-    await client.del(bookLockKey(slotId));
-    return { ok: true };
+    return { ok: true, released };
   });
 }
 
 async function findSlotBySubmission(submissionId) {
   const slots = await listSlots();
-  return slots.find(s => s.bookedBy === submissionId) || null;
+  return slots.find(s => (s.bookedIds || []).includes(submissionId)) || null;
 }
 
 module.exports = {
   listSlots, getSlot, createSlots, patchSlot, deleteSlot,
-  tryBookSlot, releaseSlot, findSlotBySubmission
+  tryBookSlot, releaseSlot, findSlotBySubmission, MAX_CAPACITY
 };
