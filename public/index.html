@@ -142,6 +142,22 @@
   .auto-photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .auto-photo-info { flex: 1; }
   .auto-photo-status { font-size: 12px; color: var(--gray); margin-bottom: 6px; min-height: 16px; }
+  .search-actor-btn {
+    margin-top: 6px; background: transparent; border: 1px solid var(--green); color: var(--green-light);
+    padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .search-actor-btn:hover:not(:disabled) { background: var(--green); color: #fff; }
+  .search-actor-btn:disabled { opacity: 0.6; cursor: default; }
+  .search-actor-status { font-size: 11px; color: var(--gray); margin-top: 4px; }
+  .search-actor-results { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+  .search-actor-result {
+    background: #0d1826; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+    cursor: pointer; text-align: left;
+  }
+  .search-actor-result:hover { border-color: var(--green-light); }
+  .search-actor-result .r-title { font-size: 12.5px; font-weight: 700; color: #fff; }
+  .search-actor-result .r-link { font-size: 10.5px; color: var(--green-light); word-break: break-all; }
+  .search-actor-result .r-snippet { font-size: 11px; color: var(--gray); margin-top: 2px; }
   .auto-photo-status.ok { color: var(--green-light); }
   .auto-photo-status.err { color: #e07a6b; }
 </style>
@@ -248,8 +264,11 @@ async function init() {
           ${isClosed ? '<p class="closed-msg">' + (role.processStatus === "caste" ? "Ce rôle a été casté. Merci de votre intérêt." : "Ce rôle n'est plus en casting. Merci de votre intérêt.") + '</p>' : `
           <form data-role="${role.name}">
             <div>
-              <label>Nom du comédien *</label>
+              <label>${role.gender === "f" ? "Nom de la comédienne *" : "Nom du comédien *"}</label>
               <input type="text" name="name" required>
+              <button type="button" class="search-actor-btn">🔍 Chercher sa fiche</button>
+              <div class="search-actor-status"></div>
+              <div class="search-actor-results"></div>
             </div>
             <div>
               <label>Agence</label>
@@ -309,8 +328,7 @@ async function init() {
   const autoStatusEl = form.querySelector(".auto-photo-status");
   const autoPreviewEl = form.querySelector(".auto-photo-preview");
 
-  cvInput.addEventListener("blur", async () => {
-    const url = cvInput.value.trim();
+  async function tryFetchPhotoFrom(url) {
     if (!url || photoFileInput.files[0]) return;
     autoStatusEl.textContent = "Recherche de la photo...";
     autoStatusEl.className = "auto-photo-status";
@@ -337,6 +355,66 @@ async function init() {
       autoStatusEl.textContent = "Recherche impossible — vous pouvez ajouter une photo ci-dessous.";
       autoStatusEl.className = "auto-photo-status err";
     }
+  }
+
+  const nameInput = form.querySelector('input[name="name"]');
+  const searchBtn = form.querySelector(".search-actor-btn");
+  const searchStatusEl = form.querySelector(".search-actor-status");
+  const searchResultsEl = form.querySelector(".search-actor-results");
+  if (searchBtn) {
+    searchBtn.addEventListener("click", async () => {
+      const actorName = nameInput.value.trim();
+      if (!actorName) {
+        searchStatusEl.textContent = "Indiquez d'abord le nom du comédien ci-dessus.";
+        return;
+      }
+      searchBtn.disabled = true;
+      searchStatusEl.textContent = "Recherche en cours...";
+      searchResultsEl.innerHTML = "";
+      try {
+        const res = await fetch("/api/search-actor", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: actorName })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          searchStatusEl.textContent = data.error || "Recherche indisponible.";
+          searchBtn.disabled = false;
+          return;
+        }
+        const results = data.results || [];
+        if (results.length === 0) {
+          searchStatusEl.textContent = "Aucun résultat trouvé — renseignez le lien manuellement ci-dessous.";
+          searchBtn.disabled = false;
+          return;
+        }
+        searchStatusEl.textContent = "Choisissez la bonne fiche :";
+        results.forEach(r => {
+          const item = document.createElement("div");
+          item.className = "search-actor-result";
+          item.innerHTML =
+            '<div class="r-title">' + r.title.replace(/</g, "&lt;") + '</div>' +
+            '<div class="r-link">' + r.link.replace(/</g, "&lt;") + '</div>' +
+            (r.snippet ? '<div class="r-snippet">' + r.snippet.replace(/</g, "&lt;") + '</div>' : "");
+          item.addEventListener("click", () => {
+            cvInput.value = r.link;
+            searchResultsEl.innerHTML = "";
+            searchStatusEl.textContent = "Fiche sélectionnée : " + r.link;
+            tryFetchPhotoFrom(r.link);
+          });
+          searchResultsEl.appendChild(item);
+        });
+      } catch {
+        searchStatusEl.textContent = "Recherche impossible pour le moment.";
+      } finally {
+        searchBtn.disabled = false;
+      }
+    });
+  }
+
+  cvInput.addEventListener("blur", async () => {
+    await tryFetchPhotoFrom(cvInput.value.trim());
   });
 
   photoFileInput.addEventListener("change", () => {

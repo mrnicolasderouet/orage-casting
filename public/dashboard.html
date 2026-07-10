@@ -156,6 +156,22 @@
   .auto-photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .auto-photo-info { flex: 1; }
   .auto-photo-status { font-size: 12px; color: var(--gray); margin-bottom: 6px; min-height: 16px; }
+  .search-actor-btn {
+    margin-top: 6px; background: transparent; border: 1px solid var(--oui); color: var(--oui);
+    padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .search-actor-btn:hover:not(:disabled) { background: var(--oui); color: #fff; }
+  .search-actor-btn:disabled { opacity: 0.6; cursor: default; }
+  .search-actor-status { font-size: 11px; color: var(--gray); margin-top: 4px; }
+  .search-actor-results { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+  .search-actor-result {
+    background: #0d1826; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+    cursor: pointer; text-align: left;
+  }
+  .search-actor-result:hover { border-color: var(--green-light); }
+  .search-actor-result .r-title { font-size: 12.5px; font-weight: 700; color: #fff; }
+  .search-actor-result .r-link { font-size: 10.5px; color: var(--green-light); word-break: break-all; }
+  .search-actor-result .r-snippet { font-size: 11px; color: var(--gray); margin-top: 2px; }
   .auto-photo-status.ok { color: var(--oui); }
   .auto-photo-status.err { color: var(--non); }
   .edit-row { grid-column: 1 / -1; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); display: none; }
@@ -239,6 +255,14 @@
             <label>Type / job</label>
             <input type="text" name="job" placeholder="ex: Rôle important">
           </div>
+          <div>
+            <label>Genre</label>
+            <select name="gender">
+              <option value="">Non précisé</option>
+              <option value="h">Homme</option>
+              <option value="f">Femme</option>
+            </select>
+          </div>
           <div class="full">
             <label>Description</label>
             <textarea name="desc" placeholder="Brief du personnage..."></textarea>
@@ -261,7 +285,10 @@
           </div>
           <div>
             <label>Nom du comédien *</label>
-            <input type="text" name="name" required>
+            <input type="text" name="name" required id="add-name-input">
+            <button type="button" id="add-search-actor-btn" class="search-actor-btn">🔍 Chercher sa fiche</button>
+            <div class="search-actor-status" id="add-search-actor-status"></div>
+            <div class="search-actor-results" id="add-search-actor-results"></div>
           </div>
           <div>
             <label>Agence</label>
@@ -691,7 +718,7 @@ function renderRolesList() {
           '<button class="rm-order-down"' + (i === ROLES.length - 1 ? " disabled" : "") + '>▼</button>' +
         '</div>' +
         '<span class="rm-name">' + escapeHtml(role.name) + '</span>' +
-        buildRoleStatusSelect(role.processStatus) +
+        buildRoleStatusSelect(role.processStatus, role.gender) +
         '<button class="rm-edit-toggle">Modifier</button>' +
         '<button class="rm-delete">Supprimer</button>' +
       '</div>' +
@@ -699,6 +726,11 @@ function renderRolesList() {
         '<div><label>Nom</label><input type="text" class="rm-name-input" value="' + escapeHtml(role.name) + '"></div>' +
         '<div><label>Âge</label><input type="text" class="rm-age-input" value="' + escapeHtml(role.age || "") + '"></div>' +
         '<div><label>Type / job</label><input type="text" class="rm-job-input" value="' + escapeHtml(role.job || "") + '"></div>' +
+        '<div><label>Genre</label><select class="rm-gender-input">' +
+          '<option value=""' + (!role.gender ? " selected" : "") + '>Non précisé</option>' +
+          '<option value="h"' + (role.gender === "h" ? " selected" : "") + '>Homme</option>' +
+          '<option value="f"' + (role.gender === "f" ? " selected" : "") + '>Femme</option>' +
+        '</select></div>' +
         '<div class="full"><label>Description</label><textarea class="rm-desc-input">' + escapeHtml(role.desc || "") + '</textarea></div>' +
         '<div class="full"><button class="rm-save">Enregistrer</button> <span class="rm-msg"></span></div>' +
       '</div>';
@@ -767,7 +799,8 @@ function renderRolesList() {
         name: item.querySelector(".rm-name-input").value.trim(),
         age: item.querySelector(".rm-age-input").value.trim(),
         job: item.querySelector(".rm-job-input").value.trim(),
-        desc: item.querySelector(".rm-desc-input").value.trim()
+        desc: item.querySelector(".rm-desc-input").value.trim(),
+        gender: item.querySelector(".rm-gender-input").value
       };
       try {
         const res = await fetch("/api/roles-edit", {
@@ -855,8 +888,7 @@ const addPhotoFileInput = addForm.querySelector('input[type="file"]');
 const addPhotoStatus = document.getElementById("add-photo-status");
 const addPhotoPreview = document.getElementById("add-photo-preview");
 
-addCvInput.addEventListener("blur", async () => {
-  const url = addCvInput.value.trim();
+async function addTryFetchPhotoFrom(url) {
   if (!url || addPhotoFileInput.files[0]) return;
   addPhotoStatus.textContent = "Recherche de la photo...";
   addPhotoStatus.className = "auto-photo-status";
@@ -883,6 +915,66 @@ addCvInput.addEventListener("blur", async () => {
     addPhotoStatus.textContent = "Recherche impossible.";
     addPhotoStatus.className = "auto-photo-status err";
   }
+}
+
+const addSearchBtn = document.getElementById("add-search-actor-btn");
+const addSearchStatus = document.getElementById("add-search-actor-status");
+const addSearchResults = document.getElementById("add-search-actor-results");
+const addNameInput = document.getElementById("add-name-input");
+if (addSearchBtn) {
+  addSearchBtn.addEventListener("click", async () => {
+    const actorName = addNameInput.value.trim();
+    if (!actorName) {
+      addSearchStatus.textContent = "Indique d'abord le nom du comédien ci-dessus.";
+      return;
+    }
+    addSearchBtn.disabled = true;
+    addSearchStatus.textContent = "Recherche en cours...";
+    addSearchResults.innerHTML = "";
+    try {
+      const res = await fetch("/api/search-actor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: actorName })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addSearchStatus.textContent = data.error || "Recherche indisponible.";
+        addSearchBtn.disabled = false;
+        return;
+      }
+      const results = data.results || [];
+      if (results.length === 0) {
+        addSearchStatus.textContent = "Aucun résultat trouvé — renseigne le lien manuellement.";
+        addSearchBtn.disabled = false;
+        return;
+      }
+      addSearchStatus.textContent = "Choisis la bonne fiche :";
+      results.forEach(r => {
+        const item = document.createElement("div");
+        item.className = "search-actor-result";
+        item.innerHTML =
+          '<div class="r-title">' + escapeHtml(r.title) + '</div>' +
+          '<div class="r-link">' + escapeHtml(r.link) + '</div>' +
+          (r.snippet ? '<div class="r-snippet">' + escapeHtml(r.snippet) + '</div>' : "");
+        item.addEventListener("click", () => {
+          addCvInput.value = r.link;
+          addSearchResults.innerHTML = "";
+          addSearchStatus.textContent = "Fiche sélectionnée : " + r.link;
+          addTryFetchPhotoFrom(r.link);
+        });
+        addSearchResults.appendChild(item);
+      });
+    } catch {
+      addSearchStatus.textContent = "Recherche impossible pour le moment.";
+    } finally {
+      addSearchBtn.disabled = false;
+    }
+  });
+}
+
+addCvInput.addEventListener("blur", async () => {
+  await addTryFetchPhotoFrom(addCvInput.value.trim());
 });
 
 addPhotoFileInput.addEventListener("change", () => {
@@ -1098,9 +1190,18 @@ async function setRoleProcessStatus(id, processStatus) {
   }
 }
 
-function buildRoleStatusSelect(processStatus) {
+function genderize(masc, fem, gender) {
+  return gender === "f" ? fem : masc;
+}
+
+function roleStatusLabelFor(statusKey, gender) {
+  if (statusKey === "caste") return genderize("Casté (confirmé)", "Castée (confirmée)", gender);
+  return ROLE_STATUS_LABELS[statusKey];
+}
+
+function buildRoleStatusSelect(processStatus, gender) {
   return '<select class="role-status-select ' + processStatus + '">' +
-    ROLE_STATUS_ORDER.map(s => '<option value="' + s + '"' + (s === processStatus ? " selected" : "") + '>' + ROLE_STATUS_LABELS[s] + '</option>').join("") +
+    ROLE_STATUS_ORDER.map(s => '<option value="' + s + '"' + (s === processStatus ? " selected" : "") + '>' + roleStatusLabelFor(s, gender) + '</option>').join("") +
     '</select>';
 }
 
@@ -1131,6 +1232,8 @@ function buildCard(s, opts) {
   opts = opts || {};
   const archived = !!opts.archived;
   const isCustomRole = !ROLES_ORDER.includes(s.role);
+  const roleForGender = ROLES.find(r => r.name === s.role);
+  const candidateGender = roleForGender ? roleForGender.gender : "";
   const card = document.createElement("div");
   card.className = "sub-card" + (archived ? " is-archived" : "");
   const statusVal = normalizeStatus(s.status);
@@ -1143,7 +1246,7 @@ function buildCard(s, opts) {
         '<option value="oui"' + (statusVal === "oui" ? " selected" : "") + '>Oui</option>' +
         '<option value="peutetre"' + (statusVal === "peutetre" ? " selected" : "") + '>Peut-être</option>' +
         '<option value="non"' + (statusVal === "non" ? " selected" : "") + '>Non</option>' +
-        '<option value="confirme"' + (statusVal === "confirme" ? " selected" : "") + '>✓ Confirmé</option>' +
+        '<option value="confirme"' + (statusVal === "confirme" ? " selected" : "") + '>✓ ' + genderize("Confirmé", "Confirmée", candidateGender) + '</option>' +
       '</select>' +
       '<select class="internal-status-select">' +
         INTERNAL_STATUS_ORDER.map(v => '<option value="' + v + '"' + ((s.internalStatus || "") === v ? " selected" : "") + '>' + INTERNAL_STATUS_LABELS[v] + '</option>').join("") +
@@ -1436,7 +1539,7 @@ function render(data) {
     header.innerHTML =
       "<h2>" + role + " (" + items.length + ")</h2>" +
       '<button class="role-pdf-btn" title="Exporter les Oui de ce rôle en PDF">⬇ PDF</button>' +
-      buildRoleStatusSelect(processStatus);
+      buildRoleStatusSelect(processStatus, roleObj.gender);
     header.querySelector(".role-pdf-btn").addEventListener("click", () => {
       exportRolePdf(role);
     });
