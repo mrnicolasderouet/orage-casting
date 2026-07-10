@@ -15,18 +15,20 @@ module.exports = async (req, res) => {
     return;
   }
   try {
-    const { name, age, job, desc } = req.body || {};
+    const { name, age, job, desc, processStatus, gender } = req.body || {};
     if (!name || !name.trim()) {
       res.status(400).json({ error: "Nom du rôle requis" });
       return;
     }
+    const initialStatus = ["recherche", "shortlist", "caste", "ferme"].includes(processStatus) ? processStatus : "recherche";
     const id = await createRole({
       name: name.trim(),
       age: (age || "").trim(),
       job: (job || "").trim(),
       desc: (desc || "").trim(),
-      closed: false,
-      processStatus: "recherche",
+      gender: ["h", "f"].includes(gender) ? gender : "",
+      closed: ["caste", "ferme"].includes(initialStatus),
+      processStatus: initialStatus,
       order: Date.now()
     });
     res.status(200).json({ ok: true, id });
