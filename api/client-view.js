@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
         cv: s.cv,
         showreel: s.showreel,
         vimeo: s.vimeo,
+        internalStatus: s.internalStatus || "",
         comments: s.comments || []
       }))
       .sort((a, b) => a.role.localeCompare(b.role));
