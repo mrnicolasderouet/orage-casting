@@ -1810,13 +1810,15 @@ function renderSlotsList() {
         });
         const capInfo = cap > 1 ? " · " + bookedIds.length + "/" + cap : "";
         statusHtml = '<span class="sa-status reserve">🎭 ' + escapeHtml(names.join("  +  ")) + capInfo + '</span>';
-        actionsHtml = '<button class="sa-free">Libérer</button><button class="sa-delete">Supprimer</button>';
+        actionsHtml = (bookedIds.length < cap ? '<button class="sa-assign">➕ Assigner</button>' : "") +
+          '<button class="sa-free">Libérer</button><button class="sa-delete">Supprimer</button>';
       } else if (s.blocked) {
         statusHtml = '<span class="sa-status bloque">⛔ Bloqué</span>';
         actionsHtml = '<button class="sa-unblock">Débloquer</button><button class="sa-delete">Supprimer</button>';
       } else {
         statusHtml = '<span class="sa-status libre">✓ Libre</span>';
-        actionsHtml = '<button class="sa-capacity">' + (cap > 1 ? "👤 Passer en solo" : "👥 Passer en duo") + '</button>' +
+        actionsHtml = '<button class="sa-assign">➕ Assigner</button>' +
+          '<button class="sa-capacity">' + (cap > 1 ? "👤 Passer en solo" : "👥 Passer en duo") + '</button>' +
           '<button class="sa-block">Bloquer</button><button class="sa-delete">Supprimer</button>';
       }
       row.innerHTML =
@@ -1835,12 +1837,69 @@ function renderSlotsList() {
       wire(".sa-block", "block");
       wire(".sa-unblock", "unblock");
       wire(".sa-capacity", "capacity", null, { capacity: cap > 1 ? 1 : 2 });
+      const assignBtn = row.querySelector(".sa-assign");
+      if (assignBtn) {
+        assignBtn.addEventListener("click", () => openAssignModal(s));
+      }
       wire(".sa-free", "free", "Libérer ce créneau ? La convocation sera retirée de la fiche " + (bookedIds.length > 1 ? "des " + bookedIds.length + " candidats" : "du candidat") + " (pense à prévenir l'agence).");
       wire(".sa-delete", "delete", bookedIds.length > 0 ? "Supprimer ce créneau RÉSERVÉ ? La convocation sera retirée de la fiche " + (bookedIds.length > 1 ? "des candidats" : "du candidat") + "." : "Supprimer ce créneau ?");
       dayEl.appendChild(row);
     });
     listEl.appendChild(dayEl);
   });
+}
+
+function openAssignModal(slot) {
+  const when = new Date(slot.start).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) +
+    " à " + new Date(slot.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const modal = openModal("➕ Assigner un candidat", "Créneau du " + when + (slot.location ? " — " + slot.location : "") + ". Aucun email n'est envoyé : à toi de prévenir l'agence si ce n'est pas déjà fait.");
+  const candidates = LAST_SUBMISSIONS
+    .filter(x => !x.archived && !(slot.bookedIds || []).includes(x.id))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  if (candidates.length === 0) {
+    modal.body.innerHTML = '<div class="empty">Aucun candidat disponible.</div>';
+    return;
+  }
+  const select = document.createElement("select");
+  select.style.cssText = "width:100%; background:#0d1826; border:1px solid var(--line); border-radius:6px; color:#fff; padding:10px; font-size:14px; margin-bottom:14px;";
+  select.innerHTML = '<option value="">— Choisir un comédien —</option>' +
+    candidates.map(c => '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + ' — ' + escapeHtml(c.role) + (c.agency ? ' (' + escapeHtml(c.agency) + ')' : '') + '</option>').join("");
+  const btn = document.createElement("button");
+  btn.className = "compare-launch-btn";
+  btn.textContent = "Assigner à ce créneau";
+  btn.disabled = true;
+  const msg = document.createElement("span");
+  msg.style.cssText = "font-size:12px; color:var(--non); margin-left:10px;";
+  select.addEventListener("change", () => { btn.disabled = !select.value; });
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    msg.style.color = "var(--gray)";
+    msg.textContent = "Assignation...";
+    try {
+      const res = await fetch("/api/slots-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ action: "assign", slotId: slot.id, submissionId: select.value })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        msg.style.color = "var(--non)";
+        msg.textContent = "Erreur : " + (body.error || res.status);
+        btn.disabled = false;
+        return;
+      }
+      modal.close();
+      await refreshSlots();
+      loadData();
+    } catch {
+      msg.style.color = "var(--non)";
+      msg.textContent = "Erreur de connexion.";
+      btn.disabled = false;
+    }
+  });
+  modal.body.appendChild(select);
+  modal.body.appendChild(btn);
+  modal.body.appendChild(msg);
 }
 
 async function slotAction(action, slotId, extra) {
