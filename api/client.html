@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORAGE — Proposition de casting</title>
+<style>
+  :root {
+    --dark: #0d1b2a; --dark2: #0a1420; --green: #1a6b3c; --green-light: #2f9a5b;
+    --gray: #8a94a3; --line: rgba(255,255,255,0.12); --card: #12233a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 56px 24px 80px; position: relative; }
+  .corner-logo { position: absolute; top: 24px; right: 24px; height: 110px; opacity: 0.95; }
+  .title-block { text-align: center; margin-bottom: 28px; }
+  .title-block h1 { margin-bottom: 10px; }
+  .elephant-wordmark { height: 20px; opacity: 0.9; }
+  .site-footer { text-align: center; color: var(--gray); font-size: 12px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .site-footer a { color: var(--gray); text-decoration: none; }
+  .site-footer a:hover { color: var(--green-light); text-decoration: underline; }
+  h1 { text-align: center; font-size: 46px; margin: 0 0 6px; letter-spacing: 1px; font-weight: 800; }
+  .confirmed-section { margin-bottom: 40px; }
+  .confirmed-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+  .confirmed-group-label { text-align: center; color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+  .confirmed-card { text-align: center; width: 130px; }
+  .confirmed-photo { width: 130px; height: 172px; object-fit: cover; border-radius: 10px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,0.4); display: block; margin-bottom: 8px; }
+  .confirmed-name { font-size: 14px; font-weight: 800; }
+  .confirmed-role { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .role-group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 22px; overflow: hidden; }
+  .role-head { display: flex; align-items: baseline; gap: 14px; padding: 20px 24px; cursor: pointer; user-select: none; }
+  .role-name { font-size: 18px; font-weight: 800; flex: 1; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; }
+  .role-count { color: var(--gray); font-size: 13px; }
+  .chevron { color: var(--gray); transition: transform 0.2s ease; }
+  .role-group.open .chevron { transform: rotate(180deg); }
+  .role-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+  .role-group.open .role-body { max-height: 4000px; }
+  .role-inner { padding: 0 24px 22px; }
+  .candidate {
+    background: #0d1826; border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px; margin-bottom: 16px; display: grid; grid-template-columns: 140px 1fr; gap: 22px;
+    transition: box-shadow 0.4s ease, border-color 0.4s ease;
+  }
+  .candidate-highlight, .confirmed-card.candidate-highlight {
+    border-color: var(--green-light) !important;
+    box-shadow: 0 0 0 3px rgba(47, 154, 91, 0.35);
+  }
+  .candidate:last-child { margin-bottom: 0; }
+  .candidate-photo { width: 140px; height: 186px; object-fit: cover; border-radius: 8px; background: #0a1420; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+  .candidate-name { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+  .candidate-agency { color: var(--gray); font-size: 13px; margin-bottom: 12px; }
+  .candidate-links { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+  .candidate-links a {
+    color: var(--green-light); text-decoration: none; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--green); border-radius: 6px; padding: 6px 12px;
+  }
+  .candidate-links a:hover { background: var(--green); color: #fff; }
+  .vimeo-play-btn {
+    color: var(--green-light); background: transparent; text-decoration: none; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--green); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-family: inherit;
+  }
+  .vimeo-play-btn:hover:not(:disabled) { background: var(--green); color: #fff; }
+  .vimeo-play-btn:disabled { opacity: 0.6; cursor: default; }
+  .vimeo-fallback-link { color: var(--gray); text-decoration: none; font-size: 12px; align-self: center; }
+  .vimeo-fallback-link:hover { color: var(--green-light); text-decoration: underline; }
+  .vimeo-embed-wrap { margin-bottom: 14px; }
+  .vimeo-embed-wrap iframe { width: 100%; aspect-ratio: 16/9; border-radius: 8px; display: block; }
+  .vimeo-close-btn {
+    display: block; margin-bottom: 8px; background: transparent; border: 1px solid var(--line); color: var(--gray);
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .vimeo-close-btn:hover { color: #fff; border-color: var(--non); }
+  .pending-tag { color: var(--gray); font-size: 12.5px; font-style: italic; padding: 6px 0; }
+
+  @media (max-width: 560px) {
+    body { overflow-x: hidden; }
+    .wrap { padding: 32px 16px 60px; }
+    h1 { font-size: 32px; }
+    .corner-logo { height: 60px; top: 16px; right: 16px; }
+    .candidate {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      text-align: center;
+      padding: 16px;
+    }
+    .candidate-photo { width: 130px; height: 172px; }
+    .candidate-links { justify-content: center; }
+    .candidate-agency { margin-bottom: 10px; }
+    .confirmed-card { width: 110px; }
+    .confirmed-photo { width: 110px; height: 146px; }
+  }
+  .comments { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 12px; }
+  .comment { font-size: 13px; color: #d7dde3; margin-bottom: 8px; padding-left: 10px; border-left: 2px solid var(--green); }
+  .comment .meta { color: var(--gray); font-size: 11px; margin-top: 2px; }
+  .comment-form { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .comment-form input[type="text"].author { width: 140px; }
+  .comment-form input, .comment-form textarea {
+    background: #0d1826; border: 1px solid var(--line); border-radius: 6px; color: #fff;
+    padding: 8px 10px; font-size: 13px; font-family: inherit;
+  }
+  .comment-form textarea { flex: 1; min-width: 200px; resize: vertical; min-height: 38px; }
+  .comment-form button {
+    background: var(--green); border: none; color: #fff; padding: 8px 16px; border-radius: 6px;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .comment-form button:hover { background: var(--green-light); }
+  .comment-msg { font-size: 12px; color: var(--green-light); margin-top: 6px; }
+  .empty { text-align: center; color: var(--gray); padding: 60px 0; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <img src="nicolas-logo.png" alt="Nicolas Derouet Casting" class="corner-logo">
+    <div class="title-block">
+      <h1>ORAGE</h1>
+      <img src="elephant-logo.png" alt="Elephant" class="elephant-wordmark">
+    </div>
+    <img src="header.jpg" alt="ORAGE" style="width:100%;border-radius:12px;margin-bottom:40px;display:block;">
+    <div id="content"><div class="empty">Chargement...</div></div>
+    <footer class="site-footer">
+      © Nicolas Derouet Casting — <a href="https://www.mrnicolasderouet.com" target="_blank">www.mrnicolasderouet.com</a>
+    </footer>
+  </div>
+
+<script>
+let ROLES_ORDER = [];
+
+async function load() {
+  const content = document.getElementById("content");
+  try {
+    const [rolesRes, viewRes] = await Promise.all([
+      fetch("/api/roles-status", { cache: "no-store" }),
+      fetch("/api/client-view?t=" + Date.now(), { cache: "no-store" })
+    ]);
+    if (rolesRes.ok) {
+      const rolesData = await rolesRes.json();
+      ROLES_ORDER = (rolesData.roles || []).map(r => r.name);
+    }
+    if (!viewRes.ok) {
+      let detail = "";
+      try { const body = await viewRes.json(); detail = body.error || body.detail || ""; } catch {}
+      content.innerHTML = '<div class="empty">Erreur de chargement (' + viewRes.status + ')' + (detail ? " : " + detail : "") + '</div>';
+      return;
+    }
+    const data = await viewRes.json();
+    render(data.submissions || [], data.confirmed || []);
+    scrollToHighlightedCandidate();
+  } catch (err) {
+    content.innerHTML = '<div class="empty">Erreur de chargement : ' + (err && err.message ? err.message : "inconnue") + '</div>';
+  }
+}
+
+function scrollToHighlightedCandidate() {
+  const hash = window.location.hash;
+  if (!hash || !hash.startsWith("#candidate-")) return;
+  const target = document.querySelector(hash);
+  if (!target) return;
+  const group = target.closest(".role-group");
+  if (group && !group.classList.contains("open")) {
+    group.classList.add("open");
+  }
+  setTimeout(() => {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("candidate-highlight");
+    setTimeout(() => target.classList.remove("candidate-highlight"), 2500);
+  }, 150);
+}
+
+function firstName(fullName) {
+  return (fullName || "").trim().split(/\s+/)[0] || "";
+}
+
+function buildConfirmedSection(confirmed) {
+  const section = document.createElement("div");
+  section.className = "confirmed-section";
+  const items = [...confirmed].sort((a, b) => {
+    const oa = (a.displayOrder !== undefined && a.displayOrder !== null) ? a.displayOrder : null;
+    const ob = (b.displayOrder !== undefined && b.displayOrder !== null) ? b.displayOrder : null;
+    if (oa !== null && ob !== null) return oa - ob;
+    if (oa !== null) return -1;
+    if (ob !== null) return 1;
+    return firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" });
+  });
+
+  const groups = [];
+  const groupMap = new Map();
+  items.forEach(s => {
+    const label = s.displayGroup && s.displayGroup.trim() ? s.displayGroup.trim() : null;
+    const key = label || ("__solo__" + s.id);
+    if (!groupMap.has(key)) {
+      const g = { label, items: [] };
+      groupMap.set(key, g);
+      groups.push(g);
+    }
+    groupMap.get(key).items.push(s);
+  });
+
+  groups.forEach(g => {
+    if (g.label) {
+      const labelEl = document.createElement("div");
+      labelEl.className = "confirmed-group-label";
+      labelEl.textContent = g.label;
+      section.appendChild(labelEl);
+    }
+    const grid = document.createElement("div");
+    grid.className = "confirmed-grid";
+    g.items.forEach(s => {
+      const card = document.createElement("div");
+      card.className = "confirmed-card";
+      card.id = "candidate-" + s.id;
+      card.innerHTML =
+        '<div class="confirmed-photo" data-photo-id="' + s.id + '"></div>' +
+        '<div class="confirmed-name">' + escapeHtml(s.name) + '</div>' +
+        '<div class="confirmed-role">' + escapeHtml(s.role) + '</div>';
+      grid.appendChild(card);
+      const ph = card.querySelector(".confirmed-photo");
+      loadPhotoIntoConfirmed(ph, s.id, s.name);
+    });
+    section.appendChild(grid);
+  });
+
+  return section;
+}
+
+async function loadPhotoIntoConfirmed(placeholderEl, id, name) {
+  try {
+    const res = await fetch("/api/client-photo?id=" + encodeURIComponent(id), { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.photo) {
+      const img = document.createElement("img");
+      img.className = "confirmed-photo";
+      img.src = data.photo;
+      img.alt = name;
+      placeholderEl.replaceWith(img);
+    }
+  } catch {
+    // silently skip
+  }
+}
+
+function render(all, confirmed) {
+  confirmed = confirmed || [];
+  const confirmedTop = confirmed.filter(c => ROLES_ORDER.includes(c.role));
+  const confirmedOther = confirmed.filter(c => !ROLES_ORDER.includes(c.role));
+  const content = document.getElementById("content");
+  content.innerHTML = "";
+
+  if (confirmedTop.length > 0) {
+    content.appendChild(buildConfirmedSection(confirmedTop));
+  }
+
+  if (all.length === 0 && confirmed.length === 0) {
+    content.innerHTML = '<div class="empty">Aucune proposition disponible pour le moment.</div>';
+    return;
+  }
+  ROLES_ORDER.forEach(role => {
+    const items = all
+      .filter(s => s.role === role)
+      .sort((a, b) => firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" }));
+    if (items.length === 0) return;
+
+    const group = document.createElement("div");
+    group.className = "role-group";
+    const head = document.createElement("div");
+    head.className = "role-head";
+    head.innerHTML =
+      '<span class="role-name">' + role + '</span>' +
+      '<span class="chevron">▾</span>';
+    head.addEventListener("click", () => group.classList.toggle("open"));
+    group.appendChild(head);
+
+    const body = document.createElement("div");
+    body.className = "role-body";
+    const inner = document.createElement("div");
+    inner.className = "role-inner";
+    items.forEach(s => inner.appendChild(buildCandidate(s)));
+    body.appendChild(inner);
+    group.appendChild(body);
+
+    content.appendChild(group);
+  });
+
+  if (confirmedOther.length > 0) {
+    const otherTitle = document.createElement("h2");
+    otherTitle.textContent = "Distribution complémentaire";
+    otherTitle.style.cssText = "font-size:15px; color:var(--green-light); text-transform:uppercase; letter-spacing:1.5px; border-bottom:1px solid var(--line); padding-bottom:10px; margin:20px 0 16px;";
+    content.appendChild(otherTitle);
+    content.appendChild(buildConfirmedSection(confirmedOther));
+  }
+}
+
+async function loadPhotoInto(placeholderEl, id, name) {
+  try {
+    const res = await fetch("/api/client-photo?id=" + encodeURIComponent(id), { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.photo) {
+      const img = document.createElement("img");
+      img.className = "candidate-photo";
+      img.src = data.photo;
+      img.alt = name;
+      placeholderEl.replaceWith(img);
+    }
+  } catch {
+    // silently skip
+  }
+}
+
+function buildCandidate(s) {
+  const el = document.createElement("div");
+  el.className = "candidate";
+  el.id = "candidate-" + s.id;
+  const comments = (s.comments || []).map(c =>
+    '<div class="comment">' + escapeHtml(c.text) +
+    '<div class="meta">' + escapeHtml(c.author) + ' — ' + new Date(c.date).toLocaleDateString("fr-FR") + '</div></div>'
+  ).join("");
+
+  el.innerHTML =
+    ('<div class="candidate-photo" data-photo-id="' + s.id + '"></div>') +
+    '<div>' +
+      '<div class="candidate-name">' + escapeHtml(s.name) + '</div>' +
+      '<div class="candidate-agency">' + escapeHtml(s.agency || "") + '</div>' +
+      '<div class="candidate-links">' +
+        (s.cv && /^https?:\/\//i.test(s.cv.trim()) ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "") +
+        (s.showreel && /^https?:\/\//i.test(s.showreel.trim()) ? '<a href="' + s.showreel + '" target="_blank">Showreel</a>' : "") +
+        (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<button class="vimeo-play-btn">▶ Voir l\'essai</button><a class="vimeo-fallback-link" href="' + s.vimeo + '" target="_blank">↗ Ouvrir dans Vimeo</a>' : '<span class="pending-tag">Essais ou selftape en cours</span>') +
+      '</div>' +
+      (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<div class="vimeo-embed-wrap"></div>' : "") +
+      '<div class="comments">' +
+        comments +
+        '<div class="comment-form">' +
+          '<input type="text" class="author" placeholder="Votre nom">' +
+          '<textarea placeholder="Votre commentaire..."></textarea>' +
+          '<button>Envoyer</button>' +
+        '</div>' +
+        '<div class="comment-msg"></div>' +
+      '</div>' +
+    '</div>';
+
+  const vimeoBtn = el.querySelector(".vimeo-play-btn");
+  if (vimeoBtn) {
+    vimeoBtn.addEventListener("click", async () => {
+      const wrap = el.querySelector(".vimeo-embed-wrap");
+      vimeoBtn.disabled = true;
+      vimeoBtn.textContent = "Chargement...";
+      let embedSrc = null;
+      try {
+        const res = await fetch("/api/resolve-vimeo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: s.vimeo.trim() })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.embedUrl) embedSrc = data.embedUrl;
+        }
+      } catch {
+        // fall through to oEmbed / direct-embed fallback below
+      }
+      if (!embedSrc) {
+        try {
+          const oembedRes = await fetch("https://vimeo.com/api/oembed.json?url=" + encodeURIComponent(s.vimeo.trim()));
+          if (oembedRes.ok) {
+            const data = await oembedRes.json();
+            const match = /src="([^"]+)"/.exec(data.html || "");
+            if (match) embedSrc = match[1];
+          }
+        } catch {
+          // fall through to direct-embed fallback below
+        }
+      }
+      // Last-resort fallback for anything still unresolved
+      if (!embedSrc) embedSrc = s.vimeo.trim();
+      wrap.innerHTML =
+        '<button class="vimeo-close-btn">✕ Fermer la vidéo</button>' +
+        '<iframe src="' + embedSrc + '" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>';
+      wrap.querySelector(".vimeo-close-btn").addEventListener("click", () => {
+        wrap.innerHTML = "";
+        vimeoBtn.style.display = "inline-block";
+        vimeoBtn.disabled = false;
+        vimeoBtn.textContent = "▶ Voir l'essai";
+      });
+      vimeoBtn.style.display = "none";
+    });
+  }
+
+  const btn = el.querySelector(".comment-form button");
+  const textarea = el.querySelector(".comment-form textarea");
+  const authorInput = el.querySelector(".comment-form .author");
+  const msg = el.querySelector(".comment-msg");
+
+  btn.addEventListener("click", async () => {
+    const text = textarea.value.trim();
+    if (!text) { msg.textContent = "Merci d'écrire un commentaire."; return; }
+    btn.disabled = true;
+    msg.textContent = "Envoi...";
+    try {
+      const res = await fetch("/api/client-comment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: s.id, text, author: authorInput.value })
+      });
+      if (!res.ok) throw new Error();
+      msg.textContent = "Commentaire envoyé ✓";
+      textarea.value = "";
+      load();
+    } catch {
+      msg.textContent = "Erreur lors de l'envoi.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  const photoPlaceholder = el.querySelector(".candidate-photo[data-photo-id]");
+  if (photoPlaceholder) loadPhotoInto(photoPlaceholder, s.id, s.name);
+
+  return el;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
+
+load();
+</script>
+</body>
+</html>
