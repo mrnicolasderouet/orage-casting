@@ -144,7 +144,7 @@ function render(message, isError) {
         html += '<div class="day-group"><h3>' + escapeHtml(day) + '</h3><div class="slot-grid">' +
           groups[day].map(s =>
             '<button class="slot-btn" data-slot="' + s.id + '">' + fmtTime(s.start) +
-            '<small>' + s.durationMin + ' min' + (s.location ? " · " + escapeHtml(s.location) : "") + '</small></button>'
+            '<small>' + s.durationMin + ' min' + (s.capacity > 1 ? ' · Duo' + (s.capacity - s.taken === 1 ? ' — 1 place restante' : '') : '') + (s.location ? " · " + escapeHtml(s.location) : "") + '</small></button>'
           ).join("") +
         '</div></div>';
       });
