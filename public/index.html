@@ -379,7 +379,7 @@ async function init() {
         });
         const data = await res.json();
         if (!res.ok) {
-          searchStatusEl.textContent = data.error || "Recherche indisponible.";
+          searchStatusEl.textContent = (data.error || "Recherche indisponible.") + (data.debugPreview ? " — " + data.debugPreview : "");
           searchBtn.disabled = false;
           return;
         }

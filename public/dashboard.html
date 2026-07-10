@@ -939,7 +939,7 @@ if (addSearchBtn) {
       });
       const data = await res.json();
       if (!res.ok) {
-        addSearchStatus.textContent = data.error || "Recherche indisponible.";
+        addSearchStatus.textContent = (data.error || "Recherche indisponible.") + (data.debugPreview ? " — " + data.debugPreview : "");
         addSearchBtn.disabled = false;
         return;
       }
