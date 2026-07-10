@@ -31,7 +31,14 @@
   .role-group { margin-bottom: 30px; }
   .role-group h2 { font-size: 16px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
   .role-group-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
-  .role-group-header h2 { border: none; padding: 0; margin: 0; }
+  .role-group-header h2 { border: none; padding: 0; margin: 0; flex: 1; }
+  .role-collapse-btn {
+    background: transparent; border: 1px solid var(--line); color: var(--gray); width: 30px; height: 30px;
+    border-radius: 6px; cursor: pointer; font-size: 13px; flex-shrink: 0;
+  }
+  .role-collapse-btn:hover { color: #fff; border-color: var(--green-light); }
+  .role-group.collapsed .role-group-content { display: none; }
+  .role-group.collapsed .role-group-header { border-bottom: none; margin-bottom: 0; padding-bottom: 16px; }
   .role-closed-badge { background: var(--non); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; margin-left: 8px; }
   .role-toggle-btn { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .role-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
@@ -354,6 +361,7 @@
 let ROLES = [];
 let ROLES_ORDER = [];
 let LAST_SUBMISSIONS = [];
+let COLLAPSED_ROLES = new Set();
 const ROLE_STATUS_LABELS = { recherche: "En recherche", shortlist: "Shortlist en cours", caste: "Casté (confirmé)", ferme: "Fermé" };
 const ROLE_STATUS_ORDER = ["recherche", "shortlist", "caste", "ferme"];
 const STATUS_ORDER = ["confirme", "oui", "peutetre", "non"];
@@ -1587,13 +1595,19 @@ function render(data) {
       });
     const processStatus = roleObj.processStatus || "recherche";
     const group = document.createElement("div");
-    group.className = "role-group";
+    group.className = "role-group" + (COLLAPSED_ROLES.has(role) ? " collapsed" : "");
     const header = document.createElement("div");
     header.className = "role-group-header";
     header.innerHTML =
+      '<button class="role-collapse-btn" title="Replier/déplier ce rôle">' + (COLLAPSED_ROLES.has(role) ? "▸" : "▾") + '</button>' +
       "<h2>" + role + " (" + items.length + ")</h2>" +
       '<button class="role-pdf-btn" title="Exporter les Oui de ce rôle en PDF">⬇ PDF</button>' +
       buildRoleStatusSelect(processStatus, roleObj.gender);
+    header.querySelector(".role-collapse-btn").addEventListener("click", () => {
+      const nowCollapsed = group.classList.toggle("collapsed");
+      header.querySelector(".role-collapse-btn").textContent = nowCollapsed ? "▸" : "▾";
+      if (nowCollapsed) COLLAPSED_ROLES.add(role); else COLLAPSED_ROLES.delete(role);
+    });
     header.querySelector(".role-pdf-btn").addEventListener("click", () => {
       exportRolePdf(role);
     });
@@ -1605,14 +1619,17 @@ function render(data) {
     });
     group.appendChild(header);
 
+    const content = document.createElement("div");
+    content.className = "role-group-content";
     if (items.length === 0) {
       const empty = document.createElement("div");
       empty.className = "empty";
       empty.textContent = "Aucune candidature reçue.";
-      group.appendChild(empty);
+      content.appendChild(empty);
     } else {
-      renderPaginated(group, items, role);
+      renderPaginated(content, items, role);
     }
+    group.appendChild(content);
     groupsEl.appendChild(group);
   });
 
@@ -1626,12 +1643,18 @@ function render(data) {
         return new Date(b.submittedAt) - new Date(a.submittedAt);
       });
     const group = document.createElement("div");
-    group.className = "role-group";
+    group.className = "role-group" + (COLLAPSED_ROLES.has(role) ? " collapsed" : "");
     const header = document.createElement("div");
     header.className = "role-group-header";
     header.innerHTML =
+      '<button class="role-collapse-btn" title="Replier/déplier ce rôle">' + (COLLAPSED_ROLES.has(role) ? "▸" : "▾") + '</button>' +
       "<h2>" + role + " <span style=\"color:var(--gray); font-weight:400; font-size:11px; text-transform:none;\">— hors casting (" + items.length + ")</span></h2>" +
       '<button class="role-toggle-btn promote-role-btn">Gérer ce rôle</button>';
+    header.querySelector(".role-collapse-btn").addEventListener("click", () => {
+      const nowCollapsed = group.classList.toggle("collapsed");
+      header.querySelector(".role-collapse-btn").textContent = nowCollapsed ? "▸" : "▾";
+      if (nowCollapsed) COLLAPSED_ROLES.add(role); else COLLAPSED_ROLES.delete(role);
+    });
     header.querySelector(".promote-role-btn").addEventListener("click", async () => {
       const btn = header.querySelector(".promote-role-btn");
       btn.disabled = true;
@@ -1645,7 +1668,10 @@ function render(data) {
       loadData();
     });
     group.appendChild(header);
-    renderPaginated(group, items, role);
+    const content = document.createElement("div");
+    content.className = "role-group-content";
+    renderPaginated(content, items, role);
+    group.appendChild(content);
     groupsEl.appendChild(group);
   });
 
