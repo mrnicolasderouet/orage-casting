@@ -329,7 +329,7 @@ function buildCandidate(s) {
       '<div class="candidate-links">' +
         (s.cv && /^https?:\/\//i.test(s.cv.trim()) ? '<button class="cv-view-btn">📄 Voir le CV / fiche</button><a class="vimeo-fallback-link" href="' + s.cv + '" target="_blank">↗ Ouvrir dans un nouvel onglet</a>' : "") +
         (s.showreel && /^https?:\/\//i.test(s.showreel.trim()) ? '<a href="' + s.showreel + '" target="_blank">Showreel</a>' : "") +
-        (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<button class="vimeo-play-btn">▶ Voir l\'essai</button><a class="vimeo-fallback-link" href="' + s.vimeo + '" target="_blank">↗ Ouvrir dans Vimeo</a>' : '<span class="pending-tag">Essais ou selftape en cours</span>') +
+        (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<button class="vimeo-play-btn">▶ Voir l\'essai</button><a class="vimeo-fallback-link" href="' + s.vimeo + '" target="_blank">↗ Ouvrir dans Vimeo</a>' : '<span class="pending-tag">' + (s.internalStatus && INTERNAL_STATUS_LABELS[s.internalStatus] ? escapeHtml(INTERNAL_STATUS_LABELS[s.internalStatus]) : "Essais ou selftape en cours") + '</span>') +
       '</div>' +
       (s.cv && /^https?:\/\//i.test(s.cv.trim()) ? '<div class="cv-embed-wrap"></div>' : "") +
       (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<div class="vimeo-embed-wrap"></div>' : "") +
@@ -447,6 +447,18 @@ function buildCandidate(s) {
 
   return el;
 }
+
+const INTERNAL_STATUS_LABELS = {
+  a_contacter: "À contacter",
+  attente_retour: "En attente de retour",
+  disponible: "Disponible",
+  indisponible: "Indisponible",
+  interesse: "Intéressé",
+  refuse_pas_interesse: "Refusé — pas intéressé",
+  rappeler_plus_tard: "À rappeler plus tard",
+  essais_disponibles: "Essais disponibles",
+  essais_en_cours: "Essais en cours"
+};
 
 function escapeHtml(str) {
   const div = document.createElement("div");

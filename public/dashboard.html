@@ -373,6 +373,7 @@ let ROLES = [];
 let ROLES_ORDER = [];
 let LAST_SUBMISSIONS = [];
 let COLLAPSED_ROLES = new Set();
+let ROLES_COLLAPSE_INITIALIZED = false;
 const ROLE_STATUS_LABELS = { recherche: "En recherche", shortlist: "Shortlist en cours", caste: "Casté (confirmé)", ferme: "Fermé" };
 const ROLE_STATUS_ORDER = ["recherche", "shortlist", "caste", "ferme"];
 const STATUS_ORDER = ["confirme", "oui", "peutetre", "non"];
@@ -1604,6 +1605,13 @@ function render(data) {
   LAST_SUBMISSIONS = all;
   const active = all.filter(s => !s.archived);
   const archived = all.filter(s => s.archived);
+
+  if (!ROLES_COLLAPSE_INITIALIZED) {
+    ROLES_COLLAPSE_INITIALIZED = true;
+    const allRoleNames = new Set(active.map(s => s.role));
+    ROLES.forEach(r => allRoleNames.add(r.name));
+    allRoleNames.forEach(r => COLLAPSED_ROLES.add(r));
+  }
 
   const statsEl = document.getElementById("stats");
   const counts = { confirme: 0, oui: 0, peutetre: 0, non: 0 };
