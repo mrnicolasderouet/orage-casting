@@ -303,7 +303,15 @@
           </div>
           <div>
             <label>Agence</label>
-            <input type="text" name="agency">
+            <input type="text" name="agency" list="known-agencies-list">
+          </div>
+          <div>
+            <label>Nom de l'agent</label>
+            <input type="text" name="agentName" list="known-agents-list">
+          </div>
+          <div>
+            <label>Contact assistant(e)</label>
+            <input type="text" name="assistantName" list="known-assistants-list">
           </div>
           <div>
             <label>Email de contact</label>
@@ -345,6 +353,9 @@
             <span class="add-profile-msg"></span>
           </div>
         </form>
+        <datalist id="known-agencies-list"></datalist>
+        <datalist id="known-agents-list"></datalist>
+        <datalist id="known-assistants-list"></datalist>
       </div>
 
       <div class="stats" id="stats"></div>
@@ -879,7 +890,8 @@ document.getElementById("cancel-add-profile").addEventListener("click", () => {
 const addRoleSelect = document.getElementById("add-role-select");
 function populateAddRoleSelect() {
   const current = addRoleSelect.value;
-  addRoleSelect.innerHTML = ROLES_ORDER.map(r => "<option value=\"" + r + "\">" + r + "</option>").join("") +
+  const alphabetical = [...ROLES_ORDER].sort((a, b) => a.localeCompare(b, "fr"));
+  addRoleSelect.innerHTML = alphabetical.map(r => "<option value=\"" + r + "\">" + r + "</option>").join("") +
     '<option value="__custom__">Autre (personnage hors casting)</option>';
   if (current && [...addRoleSelect.options].some(o => o.value === current)) {
     addRoleSelect.value = current;
@@ -1123,6 +1135,7 @@ async function tryEnter() {
     document.getElementById("gate").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
     await refreshRoles();
+    refreshKnownContacts();
     render(await res.json());
   } catch {
     errEl.textContent = "Erreur de connexion.";
@@ -1140,6 +1153,23 @@ async function refreshRoles() {
     }
   } catch {
     // keep previous value on failure
+  }
+}
+
+async function refreshKnownContacts() {
+  try {
+    const res = await fetch("/api/known-agents", { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    const fill = (listId, values) => {
+      const el = document.getElementById(listId);
+      if (el) el.innerHTML = (values || []).map(v => '<option value="' + escapeHtml(v) + '">').join("");
+    };
+    fill("known-agencies-list", data.agencies);
+    fill("known-agents-list", data.agents);
+    fill("known-assistants-list", data.assistants);
+  } catch {
+    // suggestions are a nice-to-have, fail silently
   }
 }
 
@@ -1251,7 +1281,7 @@ function buildCard(s, opts) {
   const statusVal = normalizeStatus(s.status);
   card.innerHTML =
     ('<div class="sub-photo" data-photo-id="' + s.id + '"></div>') +
-    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + (s.internalStatus ? ' · <span class="internal-status-tag">' + INTERNAL_STATUS_LABELS[s.internalStatus] + '</span>' : "") + '</span></div>' +
+    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.agentName ? " · Agent : " + escapeHtml(s.agentName) : "") + (s.assistantName ? " · Ass. : " + escapeHtml(s.assistantName) : "") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + (s.internalStatus ? ' · <span class="internal-status-tag">' + INTERNAL_STATUS_LABELS[s.internalStatus] + '</span>' : "") + '</span></div>' +
     (archived ? "" :
       '<div>' +
       '<select class="sub-status-select ' + statusVal + '" data-id="' + s.id + '">' +
@@ -1294,7 +1324,9 @@ function buildCard(s, opts) {
             '</select>' +
             '<input type="text" class="edit-role-custom" placeholder="Nom du rôle" value="' + (!ROLES_ORDER.includes(s.role) ? escapeHtml(s.role) : "") + '" style="' + (!ROLES_ORDER.includes(s.role) ? "" : "display:none;") + ' margin-top:6px;">' +
           '</div>' +
-          '<div><label>Agence</label><input type="text" class="edit-agency" value="' + escapeHtml(s.agency || "") + '"></div>' +
+          '<div><label>Agence</label><input type="text" class="edit-agency" value="' + escapeHtml(s.agency || "") + '" list="known-agencies-list"></div>' +
+          '<div><label>Nom de l\'agent</label><input type="text" class="edit-agent-name" value="' + escapeHtml(s.agentName || "") + '" list="known-agents-list"></div>' +
+          '<div><label>Contact assistant(e)</label><input type="text" class="edit-assistant-name" value="' + escapeHtml(s.assistantName || "") + '" list="known-assistants-list"></div>' +
           '<div><label>Email</label><input type="email" class="edit-email" value="' + escapeHtml(s.email || "") + '"></div>' +
           '<div><label>Deuxième email</label><input type="email" class="edit-email2" value="' + escapeHtml(s.email2 || "") + '"></div>' +
           '<div><label>Lien CV / fiche</label><input type="text" class="edit-cv" value="' + escapeHtml(s.cv || "") + '"></div>' +
@@ -1441,6 +1473,8 @@ function buildCard(s, opts) {
         name: editRow.querySelector(".edit-name").value.trim(),
         role: roleValue,
         agency: editRow.querySelector(".edit-agency").value.trim(),
+        agentName: editRow.querySelector(".edit-agent-name").value.trim(),
+        assistantName: editRow.querySelector(".edit-assistant-name").value.trim(),
         email: editRow.querySelector(".edit-email").value.trim(),
         email2: editRow.querySelector(".edit-email2").value.trim(),
         cv: editRow.querySelector(".edit-cv").value.trim(),

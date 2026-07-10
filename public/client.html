@@ -71,6 +71,29 @@
   }
   .vimeo-close-btn:hover { color: #fff; border-color: var(--non); }
   .pending-tag { color: var(--gray); font-size: 12.5px; font-style: italic; padding: 6px 0; }
+  .cv-embed-wrap { margin-bottom: 14px; }
+  .cv-embed-wrap iframe { width: 100%; height: 500px; border-radius: 8px; display: block; background: #fff; }
+  .cv-embed-fallback { font-size: 11px; color: var(--gray); margin-top: 6px; }
+  .cv-embed-fallback a { color: var(--green-light); }
+
+  @media (max-width: 560px) {
+    body { overflow-x: hidden; }
+    .wrap { padding: 32px 16px 60px; }
+    h1 { font-size: 32px; }
+    .corner-logo { height: 60px; top: 16px; right: 16px; }
+    .candidate {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      text-align: center;
+      padding: 16px;
+    }
+    .candidate-photo { width: 130px; height: 172px; }
+    .candidate-links { justify-content: center; }
+    .candidate-agency { margin-bottom: 10px; }
+    .confirmed-card { width: 110px; }
+    .confirmed-photo { width: 110px; height: 146px; }
+    .cv-embed-wrap iframe { height: 340px; }
+  }
   .comments { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 12px; }
   .comment { font-size: 13px; color: #d7dde3; margin-bottom: 8px; padding-left: 10px; border-left: 2px solid var(--green); }
   .comment .meta { color: var(--gray); font-size: 11px; margin-top: 2px; }
@@ -304,10 +327,11 @@ function buildCandidate(s) {
       '<div class="candidate-name">' + escapeHtml(s.name) + '</div>' +
       '<div class="candidate-agency">' + escapeHtml(s.agency || "") + '</div>' +
       '<div class="candidate-links">' +
-        (s.cv && /^https?:\/\//i.test(s.cv.trim()) ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "") +
+        (s.cv && /^https?:\/\//i.test(s.cv.trim()) ? '<button class="cv-view-btn">📄 Voir le CV / fiche</button><a class="vimeo-fallback-link" href="' + s.cv + '" target="_blank">↗ Ouvrir dans un nouvel onglet</a>' : "") +
         (s.showreel && /^https?:\/\//i.test(s.showreel.trim()) ? '<a href="' + s.showreel + '" target="_blank">Showreel</a>' : "") +
         (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<button class="vimeo-play-btn">▶ Voir l\'essai</button><a class="vimeo-fallback-link" href="' + s.vimeo + '" target="_blank">↗ Ouvrir dans Vimeo</a>' : '<span class="pending-tag">Essais ou selftape en cours</span>') +
       '</div>' +
+      (s.cv && /^https?:\/\//i.test(s.cv.trim()) ? '<div class="cv-embed-wrap"></div>' : "") +
       (s.vimeo && /^https?:\/\//i.test(s.vimeo.trim()) ? '<div class="vimeo-embed-wrap"></div>' : "") +
       '<div class="comments">' +
         comments +
@@ -319,6 +343,30 @@ function buildCandidate(s) {
         '<div class="comment-msg"></div>' +
       '</div>' +
     '</div>';
+
+  const cvBtn = el.querySelector(".cv-view-btn");
+  if (cvBtn) {
+    cvBtn.addEventListener("click", () => {
+      const wrap = el.querySelector(".cv-embed-wrap");
+      if (wrap.classList.contains("open")) {
+        wrap.innerHTML = "";
+        wrap.classList.remove("open");
+        cvBtn.textContent = "📄 Voir le CV / fiche";
+        return;
+      }
+      wrap.innerHTML =
+        '<button class="vimeo-close-btn cv-close-btn">✕ Fermer l\'aperçu</button>' +
+        '<iframe src="' + s.cv.trim() + '" frameborder="0"></iframe>' +
+        '<div class="cv-embed-fallback">Si l\'aperçu ne s\'affiche pas, <a href="' + s.cv.trim() + '" target="_blank">ouvre le lien directement</a>.</div>';
+      wrap.classList.add("open");
+      cvBtn.textContent = "📄 Masquer l'aperçu";
+      wrap.querySelector(".cv-close-btn").addEventListener("click", () => {
+        wrap.innerHTML = "";
+        wrap.classList.remove("open");
+        cvBtn.textContent = "📄 Voir le CV / fiche";
+      });
+    });
+  }
 
   const vimeoBtn = el.querySelector(".vimeo-play-btn");
   if (vimeoBtn) {

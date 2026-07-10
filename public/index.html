@@ -196,6 +196,9 @@
     <p class="note-line">Série très chorale : peu ou pas d'indisponibilités exigé. Merci de préciser si les comédiens proposés ont un ancrage dans le Sud-Ouest.<br>NB : Nicolas Derouet Casting n'est pas en charge des rôles d'Agnès, Garance et Patxi.</p>
 
     <div id="roles"></div>
+    <datalist id="known-agencies-list"></datalist>
+    <datalist id="known-agents-list"></datalist>
+    <datalist id="known-assistants-list"></datalist>
 
     <footer>Une candidature par comédien et par rôle. Vous pouvez soumettre plusieurs comédiens sur un même rôle.</footer>
   </div>
@@ -242,6 +245,20 @@ async function init() {
     // if this fails, the page will simply show no roles
   }
 
+  fetch("/api/known-agents", { cache: "no-store" })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) return;
+      const fill = (listId, values) => {
+        const el = document.getElementById(listId);
+        if (el) el.innerHTML = (values || []).map(v => '<option value="' + v.replace(/</g, "&lt;") + '">').join("");
+      };
+      fill("known-agencies-list", data.agencies);
+      fill("known-agents-list", data.agents);
+      fill("known-assistants-list", data.assistants);
+    })
+    .catch(() => {});
+
   if (roles.length === 0) {
     container.innerHTML = '<p style="color:var(--gray); text-align:center;">Aucun rôle disponible pour le moment.</p>';
     return;
@@ -272,7 +289,15 @@ async function init() {
             </div>
             <div>
               <label>Agence</label>
-              <input type="text" name="agency">
+              <input type="text" name="agency" list="known-agencies-list">
+            </div>
+            <div>
+              <label>Nom de l'agent</label>
+              <input type="text" name="agentName" list="known-agents-list">
+            </div>
+            <div>
+              <label>Contact assistant(e)</label>
+              <input type="text" name="assistantName" list="known-assistants-list">
             </div>
             <div>
               <label>Email de contact (comédien ou agent) *</label>
