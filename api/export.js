@@ -13,6 +13,27 @@ const STATUS_LABELS = {
   confirme: "Confirmé"
 };
 
+const STATUS_COLORS = {
+  oui: "#2F9A5B",
+  peutetre: "#B39A3A",
+  non: "#B3564A",
+  confirme: "#8B5CF6"
+};
+
+const STATUS_PRIORITY = { confirme: 0, oui: 1, peutetre: 2, non: 3 };
+
+const INTERNAL_STATUS_LABELS = {
+  a_contacter: "À contacter",
+  attente_retour: "En attente de retour",
+  disponible: "Disponible",
+  indisponible: "Indisponible",
+  interesse: "Intéressé",
+  refuse_pas_interesse: "Refusé — pas intéressé",
+  rappeler_plus_tard: "À rappeler plus tard",
+  essais_disponibles: "Essais disponibles",
+  essais_en_cours: "Essais en cours"
+};
+
 function normalizeStatus(status) {
   if (status === "confirme") return "confirme";
   if (["oui", "shortlist", "validated"].includes(status)) return "oui";
@@ -56,7 +77,7 @@ function drawRoleHeader(doc, roleName) {
   doc.y = y + barH + 14;
 }
 
-async function drawCandidate(doc, sub, index) {
+async function drawCandidate(doc, sub, index, showStatus) {
   const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const startY = doc.y;
 
@@ -67,7 +88,12 @@ async function drawCandidate(doc, sub, index) {
 
   doc.fontSize(13).fillColor(GREEN_L).font("Helvetica-Bold")
     .text(`${String(index + 1).padStart(2, "0")} — `, doc.page.margins.left, y, { continued: true });
-  doc.fillColor(DARK).text(sub.name);
+  doc.fillColor(DARK).text(sub.name, { continued: showStatus });
+  if (showStatus) {
+    const statusKey = normalizeStatus(sub.status);
+    doc.fillColor(STATUS_COLORS[statusKey]).font("Helvetica-Bold")
+      .text("   " + STATUS_LABELS[statusKey].toUpperCase());
+  }
 
   doc.moveTo(doc.page.margins.left, doc.y + 2)
     .lineTo(doc.page.margins.left + pageWidth, doc.y + 2)
@@ -100,6 +126,7 @@ async function drawCandidate(doc, sub, index) {
     ["Showreel", sub.showreel],
     ...(sub.vimeo ? [["Essai (Vimeo)", sub.vimeo]] : []),
     ["Disponibilités", sub.availability],
+    ...(showStatus && sub.internalStatus && INTERNAL_STATUS_LABELS[sub.internalStatus] ? [["Précision", INTERNAL_STATUS_LABELS[sub.internalStatus]]] : []),
     ["Note", sub.note]
   ];
   rows.forEach(([label, value]) => {
@@ -122,13 +149,21 @@ module.exports = async (req, res) => {
   }
   try {
     const statusFilter = (req.query && req.query.status) || "oui";
+    const isFullRoster = statusFilter === "all";
     const roleFilter = req.query && req.query.role ? decodeURIComponent(req.query.role) : null;
     const all = await listSubmissions();
     const firstName = (name) => (name || "").trim().split(/\s+/)[0] || "";
     const selected = all
-      .filter(s => !s.archived && normalizeStatus(s.status) === statusFilter)
+      .filter(s => !s.archived)
+      .filter(s => isFullRoster || normalizeStatus(s.status) === statusFilter)
       .filter(s => !roleFilter || s.role === roleFilter)
-      .sort((a, b) => a.role.localeCompare(b.role) || firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" }));
+      .sort((a, b) => {
+        if (isFullRoster) {
+          const prioDiff = STATUS_PRIORITY[normalizeStatus(a.status)] - STATUS_PRIORITY[normalizeStatus(b.status)];
+          if (prioDiff !== 0) return prioDiff;
+        }
+        return a.role.localeCompare(b.role) || firstName(a.name).localeCompare(firstName(b.name), "fr", { sensitivity: "base" });
+      });
 
     const buffer = await generatePdfBuffer(async (doc) => {
       doc.fontSize(30).fillColor(DARK).font("Helvetica-Bold")
@@ -153,7 +188,7 @@ module.exports = async (req, res) => {
             indexInRole = 0;
             drawRoleHeader(doc, currentRole);
           }
-          await drawCandidate(doc, sub, indexInRole);
+          await drawCandidate(doc, sub, indexInRole, isFullRoster);
           indexInRole++;
         }
       }
