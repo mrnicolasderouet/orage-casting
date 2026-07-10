@@ -1126,6 +1126,13 @@ function buildCard(s, opts) {
       (archived ? "" :
         '<div class="edit-row">' +
           '<div><label>Nom</label><input type="text" class="edit-name" value="' + escapeHtml(s.name) + '"></div>' +
+          '<div><label>Rôle</label>' +
+            '<select class="edit-role-select">' +
+              ROLES_ORDER.map(r => '<option value="' + escapeHtml(r) + '"' + (r === s.role ? " selected" : "") + '>' + escapeHtml(r) + '</option>').join("") +
+              '<option value="__custom__"' + (!ROLES_ORDER.includes(s.role) ? " selected" : "") + '>Autre...</option>' +
+            '</select>' +
+            '<input type="text" class="edit-role-custom" placeholder="Nom du rôle" value="' + (!ROLES_ORDER.includes(s.role) ? escapeHtml(s.role) : "") + '" style="' + (!ROLES_ORDER.includes(s.role) ? "" : "display:none;") + ' margin-top:6px;">' +
+          '</div>' +
           '<div><label>Agence</label><input type="text" class="edit-agency" value="' + escapeHtml(s.agency || "") + '"></div>' +
           '<div><label>Email</label><input type="email" class="edit-email" value="' + escapeHtml(s.email || "") + '"></div>' +
           '<div><label>Deuxième email</label><input type="email" class="edit-email2" value="' + escapeHtml(s.email2 || "") + '"></div>' +
@@ -1204,6 +1211,14 @@ function buildCard(s, opts) {
     editToggleBtn.addEventListener("click", () => {
       editRow.classList.toggle("open");
     });
+    const editRoleSelect = card.querySelector(".edit-role-select");
+    const editRoleCustom = card.querySelector(".edit-role-custom");
+    if (editRoleSelect) {
+      editRoleSelect.addEventListener("change", () => {
+        const isCustom = editRoleSelect.value === "__custom__";
+        editRoleCustom.style.display = isCustom ? "block" : "none";
+      });
+    }
     const editSaveBtn = card.querySelector(".edit-save-btn");
     const editCancelBtn = card.querySelector(".edit-cancel-btn");
     const editMsg = card.querySelector(".edit-msg");
@@ -1211,8 +1226,13 @@ function buildCard(s, opts) {
       editRow.classList.remove("open");
     });
     editSaveBtn.addEventListener("click", async () => {
+      let roleValue = s.role;
+      if (editRoleSelect) {
+        roleValue = editRoleSelect.value === "__custom__" ? editRoleCustom.value.trim() : editRoleSelect.value;
+      }
       const patch = {
         name: editRow.querySelector(".edit-name").value.trim(),
+        role: roleValue,
         agency: editRow.querySelector(".edit-agency").value.trim(),
         email: editRow.querySelector(".edit-email").value.trim(),
         email2: editRow.querySelector(".edit-email2").value.trim(),
