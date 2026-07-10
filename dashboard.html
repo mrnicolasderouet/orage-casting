@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORAGE — Tableau de bord casting</title>
+<style>
+  :root {
+    --dark: #0d1b2a; --dark2: #0a1420; --green: #1a6b3c; --green-light: #2f9a5b;
+    --gray: #8a94a3; --line: rgba(255,255,255,0.12); --card: #12233a;
+    --oui: #2f9a5b; --peutetre: #b39a3a; --non: #b3564a; --archive-c: #6b6f76; --confirme: #8b5cf6; --refuse: #d4622a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 80px; }
+  h1 { font-size: 32px; margin: 0 0 4px; letter-spacing: 1px; }
+  .sub { color: var(--gray); font-size: 13px; margin-bottom: 32px; }
+
+  #gate { max-width: 360px; margin: 120px auto; text-align: center; }
+  #gate input { width: 100%; padding: 12px 14px; border-radius: 6px; border: 1px solid var(--line); background: #0d1826; color: #fff; font-size: 14px; margin-bottom: 12px; }
+  #gate button { width: 100%; padding: 12px; border: none; border-radius: 6px; background: var(--green); color: #fff; font-weight: 700; cursor: pointer; }
+  #gate button:hover { background: var(--green-light); }
+  #gate .err { color: #e07a6b; font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+  #dashboard { display: none; }
+  .stats { display: flex; gap: 14px; margin-bottom: 28px; flex-wrap: wrap; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; min-width: 110px; }
+  .stat .num { font-size: 24px; font-weight: 800; }
+  .stat .label { color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .role-group { margin-bottom: 30px; }
+  .role-group h2 { font-size: 16px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
+  .role-group-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
+  .role-group-header h2 { border: none; padding: 0; margin: 0; }
+  .role-closed-badge { background: var(--non); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px; margin-left: 8px; }
+  .role-toggle-btn { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .role-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
+  .role-pdf-btn { background: var(--card); border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .role-pdf-btn:hover { background: var(--peutetre); color: #fff; }
+  .role-status-select { background: #0d1826; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  .role-status-select.recherche { border-color: var(--oui); color: var(--oui); }
+  .role-status-select.shortlist { border-color: var(--peutetre); color: var(--peutetre); }
+  .role-status-select.caste { border-color: var(--confirme); color: var(--confirme); }
+  .role-status-select.ferme { border-color: var(--non); color: var(--non); }
+  .sub-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 18px; margin-bottom: 10px; display: grid; grid-template-columns: 56px 1.8fr auto auto auto; gap: 14px; align-items: center; font-size: 13px; }
+  .sub-details { grid-column: 1 / -1; display: none; padding-top: 10px; margin-top: 8px; border-top: 1px dashed var(--line); }
+  .sub-details.open { display: block; }
+  .details-toggle-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .details-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
+  .sub-note-label { display: block; color: var(--gray); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .sub-details .sub-links { display: flex; gap: 14px; margin-bottom: 8px; }
+  .sub-details .sub-note { margin-bottom: 8px; }
+  .sub-details .edit-toggle-btn { margin-bottom: 4px; }
+  .sub-card.is-archived { opacity: 0.6; }
+  .sub-photo { width: 56px; height: 74px; object-fit: cover; border-radius: 6px; background: #0d1826; border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+  .sub-photo.no-photo { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; color: var(--gray); padding: 4px; line-height: 1.3; }
+  .sub-name { font-weight: 700; font-size: 15px; }
+  .sub-name span { display: block; color: var(--gray); font-weight: 400; font-size: 11px; margin-top: 2px; }
+  .sub-links a { color: var(--green-light); text-decoration: none; display: block; font-size: 12px; }
+  .sub-links a:hover { text-decoration: underline; }
+  .sub-note { color: #c9d0d8; font-size: 12.5px; }
+  select { background: #0d1826; color: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+  select.oui { border-color: var(--oui); }
+  select.peutetre { border-color: var(--peutetre); }
+  select.non { border-color: var(--non); }
+  select.confirme { border-color: var(--confirme); }
+  select.refuse { border-color: var(--refuse); }
+  .decline-reason-select { background: #0d1826; color: #fff; border: 1px solid var(--refuse); border-radius: 6px; padding: 5px 8px; font-size: 11px; margin-top: 4px; }
+  .archive-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .archive-btn:hover { color: #fff; border-color: var(--archive-c); }
+  .edit-toggle-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .edit-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
+  .codes-add-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .order-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; margin-bottom: 8px; }
+  .order-group-select { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 170px; }
+  .order-group-new-input { background: #0a1420; border: 1px solid var(--confirme); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 150px; }
+  .import-row { background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 10px; align-items: center; }
+  .import-row input { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; color: #fff; font-size: 12px; width: 100%; }
+  .import-row label { font-size: 9px; color: var(--gray); text-transform: uppercase; display: block; margin-bottom: 2px; }
+  .import-summary { margin-top: 14px; display: flex; align-items: center; gap: 12px; }
+  .import-confirm-btn { background: var(--oui); border: none; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .import-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .order-name { font-weight: 700; font-size: 13px; }
+  .order-role { display: block; color: var(--gray); font-weight: 400; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .order-actions { display: flex; gap: 6px; }
+  .order-actions button { background: var(--card); border: 1px solid var(--line); color: var(--gray); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .order-actions button:hover:not(:disabled) { color: #fff; border-color: var(--green-light); }
+  .order-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .role-manage-item { background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+  .role-manage-item .rm-row1 { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .rm-order-actions { display: flex; flex-direction: column; gap: 2px; }
+  .rm-order-actions button { background: var(--card); border: 1px solid var(--line); color: var(--gray); width: 22px; height: 18px; border-radius: 4px; cursor: pointer; font-size: 10px; line-height: 1; padding: 0; }
+  .rm-order-actions button:hover:not(:disabled) { color: #fff; border-color: var(--green-light); }
+  .rm-order-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .role-manage-item .rm-name { font-weight: 700; flex: 1; }
+  .role-manage-item .rm-badge { font-size: 10px; background: var(--non); color: #fff; padding: 2px 8px; border-radius: 10px; }
+  .role-manage-item .rm-toggle { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .role-manage-item .rm-edit-toggle { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .role-manage-item .rm-delete { background: transparent; border: 1px solid var(--non); color: var(--non); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .role-manage-item .rm-edit-row { display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .role-manage-item .rm-edit-row.open { display: grid; }
+  .role-manage-item .rm-edit-row .full { grid-column: 1 / -1; }
+  .role-manage-item .rm-edit-row label { font-size: 10px; color: var(--gray); text-transform: uppercase; margin-bottom: 3px; display: block; }
+  .role-manage-item .rm-edit-row input, .role-manage-item .rm-edit-row textarea {
+    width: 100%; background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; color: #fff; font-size: 12.5px; font-family: inherit;
+  }
+  .role-manage-item .rm-edit-row textarea { min-height: 50px; resize: vertical; }
+  .role-manage-item .rm-save { background: var(--oui); border: none; color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .vimeo-input { background: #0d1826; color: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; width: 100%; }
+  .vimeo-input:focus { outline: none; border-color: var(--oui); }
+  .vimeo-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .vimeo-row label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .vimeo-save { background: var(--oui); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .vimeo-save:hover { opacity: 0.85; }
+  .vimeo-saved-msg { font-size: 11px; color: var(--oui); white-space: nowrap; }
+  .photo-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .photo-row label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .photo-row input[type="file"] { font-size: 11px; color: var(--gray); max-width: 200px; }
+  .photo-save { background: var(--green); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .photo-save:hover { opacity: 0.85; }
+  .photo-saved-msg { font-size: 11px; color: var(--oui); white-space: nowrap; }
+  .comments-row { grid-column: 1 / -1; margin-top: 6px; }
+  .comments-row .label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .comment-item { font-size: 12.5px; color: #d7dde3; padding-left: 8px; border-left: 2px solid var(--peutetre); margin-bottom: 4px; }
+  .comment-item .meta { color: var(--gray); font-size: 10.5px; }
+  .scene-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .scene-btn:hover { background: var(--peutetre); color: #fff; }
+  .scene-sent { font-size: 11px; color: var(--oui); white-space: nowrap; margin-left: 6px; }
+  .scene-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .scene-row label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .empty { color: var(--gray); font-size: 13px; padding: 20px 0; }
+  .refresh { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 20px; }
+  .refresh:hover { color: #fff; }
+  .load-more-btn { display: block; width: 100%; background: var(--card); border: 1px dashed var(--line); color: var(--gray); padding: 12px; border-radius: 8px; font-size: 13px; cursor: pointer; margin-top: 6px; }
+  .load-more-btn:hover { color: #fff; border-color: var(--green-light); }
+  .add-profile-panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; margin-bottom: 24px; }
+  .add-profile-panel h3 { margin: 0 0 16px; font-size: 16px; color: var(--oui); }
+  .add-profile-panel form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .add-profile-panel .full { grid-column: 1 / -1; }
+  .add-profile-panel label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+  .add-profile-panel input, .add-profile-panel select, .add-profile-panel textarea {
+    width: 100%; background: #0d1826; border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 10px; color: #fff; font-family: inherit; font-size: 13px;
+  }
+  .add-profile-panel textarea { min-height: 50px; resize: vertical; }
+  .add-profile-actions { display: flex; align-items: center; gap: 10px; }
+  .add-profile-actions button[type="submit"] { background: var(--oui); border: none; color: #fff; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .add-profile-actions button[type="button"] { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 9px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .add-profile-msg { font-size: 12px; color: var(--gray); }
+  .auto-photo-row { display: flex; gap: 12px; align-items: flex-start; grid-column: 1 / -1; }
+  .auto-photo-preview { width: 60px; height: 80px; border-radius: 6px; background: #0d1826; border: 1px solid var(--line); flex-shrink: 0; overflow: hidden; }
+  .auto-photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .auto-photo-info { flex: 1; }
+  .auto-photo-status { font-size: 12px; color: var(--gray); margin-bottom: 6px; min-height: 16px; }
+  .auto-photo-status.ok { color: var(--oui); }
+  .auto-photo-status.err { color: var(--non); }
+  .edit-row { grid-column: 1 / -1; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); display: none; }
+  .edit-row.open { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .edit-row .full { grid-column: 1 / -1; }
+  .edit-row label { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 3px; }
+  .edit-row input, .edit-row textarea {
+    width: 100%; background: #0d1826; border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 9px; color: #fff; font-family: inherit; font-size: 12.5px;
+  }
+  .edit-row textarea { min-height: 40px; resize: vertical; }
+  .edit-actions { display: flex; align-items: center; gap: 8px; }
+  .edit-save-btn { background: var(--oui); border: none; color: #fff; padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .edit-cancel-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .edit-msg { font-size: 11px; color: var(--oui); }
+
+  #archive-section { margin-top: 50px; border-top: 1px solid var(--line); padding-top: 24px; }
+  #archive-toggle { background: none; border: none; color: var(--gray); font-size: 14px; cursor: pointer; padding: 0; margin-bottom: 16px; }
+  #archive-toggle:hover { color: #fff; }
+  #archive-list { display: none; }
+  #archive-list.open { display: block; }
+  .restore-btn { background: var(--oui); border: none; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .delete-btn { background: transparent; border: 1px solid var(--non); color: var(--non); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .delete-btn:hover { background: var(--non); color: #fff; }
+  .archive-actions { display: flex; gap: 6px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="gate">
+      <h1>ORAGE</h1>
+      <div class="sub">Tableau de bord — accès privé</div>
+      <input type="password" id="pw" placeholder="Mot de passe">
+      <button id="enter">Accéder au tableau de bord</button>
+      <div class="err" id="gate-err"></div>
+    </div>
+
+    <div id="dashboard">
+      <h1>ORAGE — Tableau de bord</h1>
+      <div class="sub">Candidatures reçues des agences</div>
+      <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+        <button class="refresh" id="refresh">↻ Actualiser</button>
+        <button class="refresh" id="export-oui" style="border-color:var(--oui);color:var(--oui);">⬇ Exporter les « Oui » (PDF)</button>
+        <button class="refresh" id="export-peutetre" style="border-color:var(--peutetre);color:var(--peutetre);">⬇ Exporter les « Peut-être » (PDF)</button>
+        <button class="refresh" id="open-client" style="border-color:var(--green-light);color:var(--green-light);">↗ Ouvrir la page client</button>
+        <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
+        <button class="refresh" id="toggle-roles-panel" style="border-color:var(--confirme);color:var(--confirme);">🎭 Gérer les rôles</button>
+        <button class="refresh" id="toggle-order-panel" style="border-color:var(--confirme);color:var(--confirme);">🔝 Ordre d'affichage</button>
+        <button class="refresh" id="toggle-import-panel" style="border-color:var(--oui);color:var(--oui);">📥 Importer une liste</button>
+      </div>
+
+      <div id="import-panel" class="add-profile-panel" style="display:none;">
+        <h3>Importer une liste de comédiens (PDF ou Word)</h3>
+        <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">L'IA lit le document et propose une liste à vérifier avant import définitif. Vérifie toujours les résultats — l'extraction peut comporter des erreurs.</p>
+        <div class="codes-add-row">
+          <input type="file" id="import-file-input" accept=".pdf,.doc,.docx">
+          <button id="import-analyze-btn">Analyser le document</button>
+          <span class="add-profile-msg" id="import-msg"></span>
+        </div>
+        <div id="import-preview"></div>
+      </div>
+
+      <div id="order-panel" class="add-profile-panel" style="display:none;">
+        <h3>Ordre d'affichage — page client</h3>
+        <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">Contrôle l'ordre des comédiens confirmés affichés en haut de la page client. Les flèches déplacent un comédien vers le haut ou le bas.</p>
+        <div id="order-list"></div>
+      </div>
+
+      <div id="roles-panel" class="add-profile-panel" style="display:none;">
+        <h3>Gérer les rôles</h3>
+        <form id="create-role-form" style="margin-bottom:20px; padding-bottom:20px; border-bottom:1px dashed var(--line);">
+          <div>
+            <label>Nom du rôle *</label>
+            <input type="text" name="name" required placeholder="ex: NOUVEAU PERSONNAGE">
+          </div>
+          <div>
+            <label>Âge</label>
+            <input type="text" name="age" placeholder="ex: 30-40 ans">
+          </div>
+          <div>
+            <label>Type / job</label>
+            <input type="text" name="job" placeholder="ex: Rôle important">
+          </div>
+          <div class="full">
+            <label>Description</label>
+            <textarea name="desc" placeholder="Brief du personnage..."></textarea>
+          </div>
+          <div class="full add-profile-actions">
+            <button type="submit">Créer le rôle</button>
+            <span class="add-profile-msg" id="create-role-msg"></span>
+          </div>
+        </form>
+        <div id="roles-list"></div>
+      </div>
+
+      <div id="add-profile-panel" class="add-profile-panel" style="display:none;">
+        <h3>Ajouter un profil</h3>
+        <form id="add-profile-form">
+          <div>
+            <label>Rôle *</label>
+            <select name="role" id="add-role-select"></select>
+            <input type="text" name="customRole" id="add-role-custom" placeholder="Nom du personnage" style="display:none; margin-top:8px;">
+          </div>
+          <div>
+            <label>Nom du comédien *</label>
+            <input type="text" name="name" required>
+          </div>
+          <div>
+            <label>Agence</label>
+            <input type="text" name="agency">
+          </div>
+          <div>
+            <label>Email de contact</label>
+            <input type="email" name="email">
+          </div>
+          <div>
+            <label>Deuxième email de contact</label>
+            <input type="email" name="email2">
+          </div>
+          <div>
+            <label>Lien CV / fiche</label>
+            <input type="text" name="cv">
+          </div>
+          <div>
+            <label>Lien showreel</label>
+            <input type="text" name="showreel">
+          </div>
+          <div>
+            <label>Disponibilités</label>
+            <input type="text" name="availability">
+          </div>
+          <div class="full">
+            <label>Photo (JPG ou PNG, optionnel — recherchée automatiquement depuis le lien CV / fiche)</label>
+            <div class="auto-photo-row">
+              <div class="auto-photo-preview" id="add-photo-preview"></div>
+              <div class="auto-photo-info">
+                <div class="auto-photo-status" id="add-photo-status"></div>
+                <input type="file" name="photo" accept="image/jpeg,image/png,image/jpg">
+              </div>
+            </div>
+          </div>
+          <div class="full">
+            <label>Note</label>
+            <textarea name="note"></textarea>
+          </div>
+          <div class="full add-profile-actions">
+            <button type="submit">Ajouter</button>
+            <button type="button" id="cancel-add-profile">Annuler</button>
+            <span class="add-profile-msg"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <div id="groups"></div>
+
+      <div id="archive-section">
+        <button id="archive-toggle">▸ Profils archivés (<span id="archive-count">0</span>)</button>
+        <div id="archive-list"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+let ROLES = [];
+let ROLES_ORDER = [];
+let LAST_SUBMISSIONS = [];
+const ROLE_STATUS_LABELS = { recherche: "En recherche", shortlist: "Shortlist en cours", caste: "Casté (confirmé)", ferme: "Fermé" };
+const ROLE_STATUS_ORDER = ["recherche", "shortlist", "caste", "ferme"];
+const STATUS_ORDER = ["confirme", "oui", "peutetre", "non", "refuse"];
+let PASSWORD = "";
+
+function normalizeStatus(status) {
+  if (status === "confirme") return "confirme";
+  if (status === "refuse") return "refuse";
+  if (["oui", "shortlist", "validated"].includes(status)) return "oui";
+  if (["non", "rejected"].includes(status)) return "non";
+  return "peutetre";
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
+
+async function resizeImage(file, maxDim, quality) {
+  maxDim = maxDim || 500;
+  quality = quality || 0.75;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        if (!img.naturalWidth || !img.naturalHeight) {
+          reject(new Error("Image non décodable"));
+          return;
+        }
+        let width = img.width, height = img.height;
+        if (width > height && width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Image invalide"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("Lecture du fichier impossible"));
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById("enter").addEventListener("click", tryEnter);
+document.getElementById("pw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryEnter(); });
+document.getElementById("refresh").addEventListener("click", loadData);
+document.getElementById("export-oui").addEventListener("click", () => exportDocx("oui"));
+document.getElementById("export-peutetre").addEventListener("click", () => exportDocx("peutetre"));
+document.getElementById("open-client").addEventListener("click", () => window.open("/client", "_blank"));
+document.getElementById("archive-toggle").addEventListener("click", () => {
+  const list = document.getElementById("archive-list");
+  list.classList.toggle("open");
+  document.getElementById("archive-toggle").textContent =
+    (list.classList.contains("open") ? "▾" : "▸") + " Profils archivés (" + document.getElementById("archive-count").textContent + ")";
+});
+
+document.getElementById("toggle-import-panel").addEventListener("click", () => {
+  const panel = document.getElementById("import-panel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+});
+
+let importCandidates = [];
+
+document.getElementById("import-analyze-btn").addEventListener("click", async () => {
+  const fileInput = document.getElementById("import-file-input");
+  const msg = document.getElementById("import-msg");
+  const btn = document.getElementById("import-analyze-btn");
+  const file = fileInput.files[0];
+  if (!file) {
+    msg.textContent = "Choisis d'abord un fichier.";
+    return;
+  }
+  if (file.size > 3 * 1024 * 1024) {
+    msg.textContent = "Fichier trop volumineux (3 Mo max). Essaie un export allégé ou une version raccourcie du document.";
+    return;
+  }
+  btn.disabled = true;
+  msg.textContent = "Lecture du document...";
+  document.getElementById("import-preview").innerHTML = "";
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = () => reject(new Error("Lecture impossible"));
+      reader.readAsDataURL(file);
+    });
+    msg.textContent = "Analyse par l'IA en cours...";
+    const res = await fetch("/api/import-candidates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ fileBase64: base64, fileName: file.name })
+    });
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      msg.textContent = "Réponse du serveur invalide (fichier probablement trop volumineux pour Vercel). Essaie un fichier plus léger.";
+      btn.disabled = false;
+      return;
+    }
+    if (!res.ok) {
+      msg.textContent = (data.error || "Erreur lors de l'analyse.") + (data.debugPreview ? " — Aperçu : " + data.debugPreview : "");
+      btn.disabled = false;
+      return;
+    }
+    importCandidates = data.candidates || [];
+    if (importCandidates.length === 0) {
+      msg.textContent = "Aucun comédien détecté dans ce document.";
+      btn.disabled = false;
+      return;
+    }
+    msg.textContent = importCandidates.length + " comédien(s) détecté(s) — vérifie et corrige avant d'importer.";
+    renderImportPreview();
+  } catch (err) {
+    msg.textContent = (err && err.message) || "Erreur lors de l'analyse.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function renderImportPreview() {
+  const wrap = document.getElementById("import-preview");
+  wrap.innerHTML = "";
+  importCandidates.forEach((c, i) => {
+    const row = document.createElement("div");
+    row.className = "import-row";
+    row.innerHTML =
+      '<input type="checkbox" class="import-include" checked>' +
+      '<div><label>Nom</label><input type="text" class="import-name" value="' + escapeHtml(c.name || "") + '"></div>' +
+      '<div><label>Rôle</label><input type="text" class="import-role" value="' + escapeHtml(c.role || "") + '" placeholder="ex: ALEXANDRE DE CHASTENET"></div>' +
+      '<div><label>Agence</label><input type="text" class="import-agency" value="' + escapeHtml(c.agency || "") + '"></div>';
+    row.querySelector(".import-name").addEventListener("input", (e) => { importCandidates[i].name = e.target.value; });
+    row.querySelector(".import-role").addEventListener("input", (e) => { importCandidates[i].role = e.target.value; });
+    row.querySelector(".import-agency").addEventListener("input", (e) => { importCandidates[i].agency = e.target.value; });
+    row.querySelector(".import-include").addEventListener("change", (e) => { importCandidates[i]._include = e.target.checked; });
+    importCandidates[i]._include = true;
+    wrap.appendChild(row);
+  });
+  const summary = document.createElement("div");
+  summary.className = "import-summary";
+  summary.innerHTML = '<button class="import-confirm-btn">Importer les profils sélectionnés</button><span id="import-confirm-msg"></span>';
+  summary.querySelector(".import-confirm-btn").addEventListener("click", confirmImport);
+  wrap.appendChild(summary);
+}
+
+async function confirmImport() {
+  const toImport = importCandidates.filter(c => c._include && c.name && c.role);
+  const msgEl = document.getElementById("import-confirm-msg");
+  if (toImport.length === 0) {
+    msgEl.textContent = "Rien à importer (nom et rôle requis).";
+    return;
+  }
+  const btn = document.querySelector(".import-confirm-btn");
+  btn.disabled = true;
+  let done = 0, failed = 0;
+  for (const c of toImport) {
+    msgEl.textContent = "Import " + (done + failed + 1) + " / " + toImport.length + " (" + c.name + ")...";
+    // Match against an existing role name case/space-insensitively, to avoid
+    // creating an accidental duplicate role when the AI's spelling differs slightly.
+    const normalize = (s) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const existingMatch = ROLES.find(r => normalize(r.name) === normalize(c.role));
+    const roleToUse = existingMatch ? existingMatch.name : c.role;
+    let photo = "";
+    if (c.cv && /^https?:\/\//i.test(c.cv.trim())) {
+      try {
+        const photoRes = await fetch("/api/fetch-photo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: c.cv.trim() })
+        });
+        if (photoRes.ok) {
+          const photoData = await photoRes.json();
+          if (photoData.photo) photo = photoData.photo;
+        }
+      } catch {
+        // no photo found, continue without one
+      }
+    }
+    try {
+      const res = await fetch("/api/admin-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({
+          name: c.name, role: roleToUse, agency: c.agency, email: c.email,
+          email2: c.email2, cv: c.cv, showreel: c.showreel, availability: c.availability, note: c.note,
+          photo: photo || undefined
+        })
+      });
+      if (res.ok) done++; else failed++;
+    } catch {
+      failed++;
+    }
+  }
+  msgEl.textContent = done + " profil(s) importé(s)" + (failed ? ", " + failed + " échec(s)" : "") + ".";
+  btn.disabled = false;
+  importCandidates = [];
+  document.getElementById("import-preview").innerHTML = "";
+  document.getElementById("import-file-input").value = "";
+  await refreshRoles();
+  loadData();
+}
+
+document.getElementById("toggle-order-panel").addEventListener("click", () => {
+  const panel = document.getElementById("order-panel");
+  const opening = panel.style.display === "none";
+  panel.style.display = opening ? "block" : "none";
+  if (opening) renderOrderPanel();
+});
+
+function renderOrderPanel() {
+  const listEl = document.getElementById("order-list");
+  listEl.innerHTML = "";
+  let items = LAST_SUBMISSIONS.filter(s => !s.archived && normalizeStatus(s.status) === "confirme" && ROLES_ORDER.includes(s.role));
+  items.sort((a, b) => {
+    const oa = (a.displayOrder !== undefined && a.displayOrder !== null) ? a.displayOrder : 999999;
+    const ob = (b.displayOrder !== undefined && b.displayOrder !== null) ? b.displayOrder : 999999;
+    if (oa !== ob) return oa - ob;
+    return a.name.localeCompare(b.name, "fr");
+  });
+  items.forEach((s, i) => { if (s.displayOrder === undefined || s.displayOrder === null) s.displayOrder = i; });
+
+  if (items.length === 0) {
+    listEl.innerHTML = '<div class="empty">Aucun comédien confirmé pour tes rôles habituels pour le moment.</div>';
+    return;
+  }
+
+  const existingGroups = [...new Set(items.map(s => (s.displayGroup || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+
+  items.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "order-item";
+    const currentGroup = (s.displayGroup || "").trim();
+    const groupOptions = '<option value="">Aucun groupe</option>' +
+      existingGroups.map(g => '<option value="' + escapeHtml(g) + '"' + (g === currentGroup ? " selected" : "") + '>' + escapeHtml(g) + '</option>').join("") +
+      '<option value="__new__">+ Nouveau groupe...</option>';
+    row.innerHTML =
+      '<span class="order-name">' + escapeHtml(s.name) + '<span class="order-role">' + escapeHtml(s.role) + '</span></span>' +
+      '<select class="order-group-select">' + groupOptions + '</select>' +
+      '<input type="text" class="order-group-new-input" placeholder="Nom du nouveau groupe" style="display:none;">' +
+      '<div class="order-actions">' +
+        '<button class="order-up"' + (i === 0 ? " disabled" : "") + '>▲</button>' +
+        '<button class="order-down"' + (i === items.length - 1 ? " disabled" : "") + '>▼</button>' +
+      '</div>';
+    const groupSelect = row.querySelector(".order-group-select");
+    const groupNewInput = row.querySelector(".order-group-new-input");
+    groupSelect.addEventListener("change", async () => {
+      if (groupSelect.value === "__new__") {
+        groupNewInput.style.display = "inline-block";
+        groupNewInput.focus();
+        return;
+      }
+      s.displayGroup = groupSelect.value;
+      await updateField(s.id, "displayGroup", groupSelect.value);
+      renderOrderPanel();
+    });
+    groupNewInput.addEventListener("keydown", async (e) => {
+      if (e.key !== "Enter") return;
+      const val = groupNewInput.value.trim();
+      if (!val) return;
+      s.displayGroup = val;
+      await updateField(s.id, "displayGroup", val);
+      renderOrderPanel();
+    });
+    groupNewInput.addEventListener("blur", async () => {
+      const val = groupNewInput.value.trim();
+      if (!val) { renderOrderPanel(); return; }
+      s.displayGroup = val;
+      await updateField(s.id, "displayGroup", val);
+      renderOrderPanel();
+    });
+    row.querySelector(".order-up").addEventListener("click", async () => {
+      if (i === 0) return;
+      const other = items[i - 1];
+      const tmp = s.displayOrder;
+      await updateField(s.id, "displayOrder", other.displayOrder);
+      await updateField(other.id, "displayOrder", tmp);
+      s.displayOrder = other.displayOrder;
+      other.displayOrder = tmp;
+      renderOrderPanel();
+    });
+    row.querySelector(".order-down").addEventListener("click", async () => {
+      if (i === items.length - 1) return;
+      const other = items[i + 1];
+      const tmp = s.displayOrder;
+      await updateField(s.id, "displayOrder", other.displayOrder);
+      await updateField(other.id, "displayOrder", tmp);
+      s.displayOrder = other.displayOrder;
+      other.displayOrder = tmp;
+      renderOrderPanel();
+    });
+    listEl.appendChild(row);
+  });
+}
+
+document.getElementById("toggle-roles-panel").addEventListener("click", () => {
+  const panel = document.getElementById("roles-panel");
+  const opening = panel.style.display === "none";
+  panel.style.display = opening ? "block" : "none";
+  if (opening) renderRolesList();
+});
+
+function renderRolesList() {
+  const listEl = document.getElementById("roles-list");
+  listEl.innerHTML = "";
+  if (ROLES.length === 0) {
+    listEl.innerHTML = '<div class="empty">Aucun rôle créé pour le moment.</div>';
+    return;
+  }
+  ROLES.forEach((role, i) => {
+    const item = document.createElement("div");
+    item.className = "role-manage-item";
+    item.innerHTML =
+      '<div class="rm-row1">' +
+        '<div class="rm-order-actions">' +
+          '<button class="rm-order-up"' + (i === 0 ? " disabled" : "") + '>▲</button>' +
+          '<button class="rm-order-down"' + (i === ROLES.length - 1 ? " disabled" : "") + '>▼</button>' +
+        '</div>' +
+        '<span class="rm-name">' + escapeHtml(role.name) + '</span>' +
+        buildRoleStatusSelect(role.processStatus) +
+        '<button class="rm-edit-toggle">Modifier</button>' +
+        '<button class="rm-delete">Supprimer</button>' +
+      '</div>' +
+      '<div class="rm-edit-row">' +
+        '<div><label>Nom</label><input type="text" class="rm-name-input" value="' + escapeHtml(role.name) + '"></div>' +
+        '<div><label>Âge</label><input type="text" class="rm-age-input" value="' + escapeHtml(role.age || "") + '"></div>' +
+        '<div><label>Type / job</label><input type="text" class="rm-job-input" value="' + escapeHtml(role.job || "") + '"></div>' +
+        '<div class="full"><label>Description</label><textarea class="rm-desc-input">' + escapeHtml(role.desc || "") + '</textarea></div>' +
+        '<div class="full"><button class="rm-save">Enregistrer</button> <span class="rm-msg"></span></div>' +
+      '</div>';
+
+    item.querySelector(".rm-order-up").addEventListener("click", async () => {
+      if (i === 0) return;
+      const other = ROLES[i - 1];
+      const tmp = role.order || 0;
+      await fetch("/api/roles-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: role.id, patch: { order: other.order || 0 } })
+      });
+      await fetch("/api/roles-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: other.id, patch: { order: tmp } })
+      });
+      await refreshRoles();
+      renderRolesList();
+      loadData();
+    });
+    item.querySelector(".rm-order-down").addEventListener("click", async () => {
+      if (i === ROLES.length - 1) return;
+      const other = ROLES[i + 1];
+      const tmp = role.order || 0;
+      await fetch("/api/roles-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: role.id, patch: { order: other.order || 0 } })
+      });
+      await fetch("/api/roles-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: other.id, patch: { order: tmp } })
+      });
+      await refreshRoles();
+      renderRolesList();
+      loadData();
+    });
+    item.querySelector(".role-status-select").addEventListener("change", async (e) => {
+      const val = e.target.value;
+      e.target.className = "role-status-select " + val;
+      await setRoleProcessStatus(role.id, val);
+      await refreshRoles();
+      loadData();
+    });
+    item.querySelector(".rm-edit-toggle").addEventListener("click", () => {
+      item.querySelector(".rm-edit-row").classList.toggle("open");
+    });
+    item.querySelector(".rm-delete").addEventListener("click", async () => {
+      if (!confirm('Supprimer le rôle "' + role.name + '" ? Les candidatures déjà reçues pour ce rôle resteront dans le tableau de bord, classées "hors casting".')) return;
+      await fetch("/api/roles-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ id: role.id })
+      });
+      await refreshRoles();
+      renderRolesList();
+      loadData();
+    });
+    item.querySelector(".rm-save").addEventListener("click", async () => {
+      const msg = item.querySelector(".rm-msg");
+      msg.textContent = "Enregistrement...";
+      const patch = {
+        name: item.querySelector(".rm-name-input").value.trim(),
+        age: item.querySelector(".rm-age-input").value.trim(),
+        job: item.querySelector(".rm-job-input").value.trim(),
+        desc: item.querySelector(".rm-desc-input").value.trim()
+      };
+      try {
+        const res = await fetch("/api/roles-edit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+          body: JSON.stringify({ id: role.id, patch })
+        });
+        if (!res.ok) throw new Error();
+        msg.textContent = "Enregistré ✓";
+        await refreshRoles();
+        setTimeout(() => { renderRolesList(); loadData(); }, 500);
+      } catch {
+        msg.textContent = "Erreur";
+      }
+    });
+
+    listEl.appendChild(item);
+  });
+}
+
+document.getElementById("create-role-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type="submit"]');
+  const msg = document.getElementById("create-role-msg");
+  const data = Object.fromEntries(new FormData(form).entries());
+  btn.disabled = true;
+  msg.textContent = "Création...";
+  try {
+    const res = await fetch("/api/roles-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || "");
+    }
+    msg.textContent = "Rôle créé ✓";
+    form.reset();
+    await refreshRoles();
+    renderRolesList();
+    loadData();
+  } catch (err) {
+    msg.textContent = (err && err.message) || "Erreur lors de la création.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById("toggle-add-form").addEventListener("click", () => {
+  const panel = document.getElementById("add-profile-panel");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+});
+
+document.getElementById("cancel-add-profile").addEventListener("click", () => {
+  document.getElementById("add-profile-panel").style.display = "none";
+  document.getElementById("add-profile-form").reset();
+  document.getElementById("add-photo-status").textContent = "";
+  document.getElementById("add-photo-preview").innerHTML = "";
+  document.getElementById("add-role-custom").style.display = "none";
+});
+
+const addRoleSelect = document.getElementById("add-role-select");
+function populateAddRoleSelect() {
+  const current = addRoleSelect.value;
+  addRoleSelect.innerHTML = ROLES_ORDER.map(r => "<option value=\"" + r + "\">" + r + "</option>").join("") +
+    '<option value="__custom__">Autre (personnage hors casting)</option>';
+  if (current && [...addRoleSelect.options].some(o => o.value === current)) {
+    addRoleSelect.value = current;
+  }
+}
+
+const addRoleCustom = document.getElementById("add-role-custom");
+addRoleSelect.addEventListener("change", () => {
+  const isCustom = addRoleSelect.value === "__custom__";
+  addRoleCustom.style.display = isCustom ? "block" : "none";
+  addRoleCustom.required = isCustom;
+});
+
+let addAutoPhotoData = null;
+const addForm = document.getElementById("add-profile-form");
+const addCvInput = addForm.querySelector('input[name="cv"]');
+const addPhotoFileInput = addForm.querySelector('input[type="file"]');
+const addPhotoStatus = document.getElementById("add-photo-status");
+const addPhotoPreview = document.getElementById("add-photo-preview");
+
+addCvInput.addEventListener("blur", async () => {
+  const url = addCvInput.value.trim();
+  if (!url || addPhotoFileInput.files[0]) return;
+  addPhotoStatus.textContent = "Recherche de la photo...";
+  addPhotoStatus.className = "auto-photo-status";
+  try {
+    const res = await fetch("/api/fetch-photo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (data.photo) {
+      addAutoPhotoData = data.photo;
+      addPhotoStatus.textContent = "Photo trouvée automatiquement ✓";
+      addPhotoStatus.className = "auto-photo-status ok";
+      addPhotoPreview.innerHTML = '<img src="' + data.photo + '" alt="Aperçu">';
+    } else {
+      addAutoPhotoData = null;
+      addPhotoStatus.textContent = "Aucune photo trouvée automatiquement.";
+      addPhotoStatus.className = "auto-photo-status err";
+      addPhotoPreview.innerHTML = "";
+    }
+  } catch {
+    addAutoPhotoData = null;
+    addPhotoStatus.textContent = "Recherche impossible.";
+    addPhotoStatus.className = "auto-photo-status err";
+  }
+});
+
+addPhotoFileInput.addEventListener("change", () => {
+  if (addPhotoFileInput.files[0]) {
+    addPhotoStatus.textContent = "Photo manuelle sélectionnée (remplace la recherche automatique).";
+    addPhotoStatus.className = "auto-photo-status ok";
+  }
+});
+
+document.getElementById("add-profile-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type="submit"]');
+  const msg = form.querySelector(".add-profile-msg");
+  const data = Object.fromEntries(new FormData(form).entries());
+  if (data.role === "__custom__") {
+    data.role = (data.customRole || "").trim();
+  }
+  delete data.customRole;
+  if (!data.role) {
+    msg.textContent = "Merci d'indiquer un rôle.";
+    return;
+  }
+  const fileInput = form.querySelector('input[type="file"]');
+  const file = fileInput.files[0];
+  btn.disabled = true;
+  msg.textContent = "Enregistrement...";
+  try {
+    if (file) {
+      data.photo = await resizeImage(file);
+    } else if (addAutoPhotoData) {
+      data.photo = addAutoPhotoData;
+    } else {
+      delete data.photo;
+    }
+    const res = await fetch("/api/admin-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || "");
+    }
+    msg.textContent = "Profil ajouté ✓";
+    addAutoPhotoData = null;
+    addPhotoStatus.textContent = "";
+    addPhotoPreview.innerHTML = "";
+    form.reset();
+    setTimeout(() => {
+      document.getElementById("add-profile-panel").style.display = "none";
+      msg.textContent = "";
+      loadData();
+    }, 800);
+  } catch (err) {
+    msg.textContent = (err && err.message) || "Erreur lors de l'ajout.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function exportDocx(status) {
+  try {
+    const res = await fetch("/api/export?status=" + status, {
+      headers: { "x-dashboard-password": PASSWORD }
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert("Erreur export : " + (body.error || res.status));
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ORAGE_" + status + "_" + new Date().toISOString().slice(0, 10) + ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert("Erreur lors de l'export.");
+  }
+}
+
+async function exportRolePdf(role) {
+  const choice = prompt('Exporter le PDF de "' + role + '" pour quel statut ?\n\nTape : oui, peutetre, confirme ou non', "oui");
+  if (!choice) return;
+  const status = choice.trim().toLowerCase();
+  if (!["oui", "peutetre", "confirme", "non"].includes(status)) {
+    alert('Statut non reconnu. Tape exactement : oui, peutetre, confirme ou non.');
+    return;
+  }
+  try {
+    const res = await fetch("/api/export?status=" + status + "&role=" + encodeURIComponent(role), {
+      headers: { "x-dashboard-password": PASSWORD }
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert("Erreur export : " + (body.error || res.status));
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ORAGE_" + role.replace(/[^A-Za-z0-9]+/g, "_") + "_" + status + "_" + new Date().toISOString().slice(0, 10) + ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch {
+    alert("Erreur lors de l'export.");
+  }
+}
+
+async function tryEnter() {
+  const pw = document.getElementById("pw").value;
+  const errEl = document.getElementById("gate-err");
+  errEl.textContent = "";
+  try {
+    const res = await fetch("/api/submissions", { headers: { "x-dashboard-password": pw } });
+    if (!res.ok) {
+      let detail = "";
+      try { const body = await res.json(); detail = body.error || body.detail || ""; } catch {}
+      if (res.status === 401) {
+        errEl.textContent = "Mot de passe incorrect.";
+      } else {
+        errEl.textContent = "Erreur serveur (" + res.status + ")" + (detail ? " : " + detail : "");
+      }
+      return;
+    }
+    PASSWORD = pw;
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    await refreshRoles();
+    render(await res.json());
+  } catch {
+    errEl.textContent = "Erreur de connexion.";
+  }
+}
+
+async function refreshRoles() {
+  try {
+    const res = await fetch("/api/roles-status", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      ROLES = data.roles || [];
+      ROLES_ORDER = ROLES.map(r => r.name);
+      populateAddRoleSelect();
+    }
+  } catch {
+    // keep previous value on failure
+  }
+}
+
+async function loadData() {
+  await refreshRoles();
+  const res = await fetch("/api/submissions", { headers: { "x-dashboard-password": PASSWORD } });
+  if (res.ok) render(await res.json());
+}
+
+async function updateField(id, field, value) {
+  try {
+    const res = await fetch("/api/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ id: id, field: field, value: value })
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function sendScene(id) {
+  try {
+    const res = await fetch("/api/send-scene", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ id })
+    });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, error: body.error, detail: body.detail };
+  } catch {
+    return { ok: false, error: "Erreur de connexion" };
+  }
+}
+
+async function deleteForever(id) {
+  try {
+    const res = await fetch("/api/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ id: id })
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function setRoleProcessStatus(id, processStatus) {
+  try {
+    const res = await fetch("/api/roles-edit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ id, patch: { processStatus } })
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+function buildRoleStatusSelect(processStatus) {
+  return '<select class="role-status-select ' + processStatus + '">' +
+    ROLE_STATUS_ORDER.map(s => '<option value="' + s + '"' + (s === processStatus ? " selected" : "") + '>' + ROLE_STATUS_LABELS[s] + '</option>').join("") +
+    '</select>';
+}
+
+async function loadPhotoInto(placeholderEl, id, name) {
+  try {
+    const res = await fetch("/api/photo?id=" + encodeURIComponent(id) + "&t=" + Date.now(), {
+      headers: { "x-dashboard-password": PASSWORD },
+      cache: "no-store"
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.photo) {
+      const img = document.createElement("img");
+      img.className = "sub-photo";
+      img.src = data.photo;
+      img.alt = name;
+      placeholderEl.replaceWith(img);
+    } else {
+      placeholderEl.classList.add("no-photo");
+      placeholderEl.textContent = "Pas de photo";
+    }
+  } catch {
+    // silently skip; placeholder stays empty
+  }
+}
+
+function buildCard(s, opts) {
+  opts = opts || {};
+  const archived = !!opts.archived;
+  const isCustomRole = !ROLES_ORDER.includes(s.role);
+  const card = document.createElement("div");
+  card.className = "sub-card" + (archived ? " is-archived" : "");
+  const statusVal = normalizeStatus(s.status);
+  card.innerHTML =
+    ('<div class="sub-photo" data-photo-id="' + s.id + '"></div>') +
+    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + (s.declineReason ? ' · <span style="color:var(--refuse);">Refusé — ' + (s.declineReason === "pas_interesse" ? "pas intéressé" : "indisponible") + '</span>' : "") + '</span></div>' +
+    (archived ? "" :
+      '<div>' +
+      '<select class="sub-status-select ' + statusVal + '" data-id="' + s.id + '">' +
+        '<option value="oui"' + (statusVal === "oui" ? " selected" : "") + '>Oui</option>' +
+        '<option value="peutetre"' + (statusVal === "peutetre" ? " selected" : "") + '>Peut-être</option>' +
+        '<option value="non"' + (statusVal === "non" ? " selected" : "") + '>Non</option>' +
+        '<option value="confirme"' + (statusVal === "confirme" ? " selected" : "") + '>✓ Confirmé</option>' +
+        '<option value="refuse"' + (statusVal === "refuse" ? " selected" : "") + '>✕ Refusé (comédien)</option>' +
+      '</select>' +
+      (statusVal === "refuse" ?
+        '<select class="decline-reason-select">' +
+          '<option value=""' + (!s.declineReason ? " selected" : "") + '>Motif...</option>' +
+          '<option value="pas_interesse"' + (s.declineReason === "pas_interesse" ? " selected" : "") + '>Pas intéressé</option>' +
+          '<option value="indisponible"' + (s.declineReason === "indisponible" ? " selected" : "") + '>Indisponible</option>' +
+        '</select>' : ""
+      ) +
+      (isCustomRole ? '<div style="font-size:10px; color:var(--gray); max-width:120px; margin-top:4px;">Seul « Confirmé » l\'affiche côté client</div>' : "") +
+      '</div>' +
+      '<button class="archive-btn">Archiver</button>'
+    ) +
+    (archived ?
+      '<div class="archive-actions">' +
+        '<button class="restore-btn">Restaurer</button>' +
+        '<button class="delete-btn">Supprimer définitivement</button>' +
+      '</div>' : ""
+    ) +
+    '<button class="details-toggle-btn">Détails ▾</button>' +
+    '<div class="sub-details">' +
+      '<div class="sub-links">' +
+        (s.cv ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "") +
+        (s.showreel ? '<a href="' + s.showreel + '" target="_blank">Showreel</a>' : "") +
+      '</div>' +
+      '<div class="sub-note"><span class="sub-note-label">Disponibilités</span>' + (s.availability || "—") + '</div>' +
+      '<div class="sub-note"><span class="sub-note-label">Note</span>' + (s.note || "—") + '</div>' +
+      (archived ? "" : '<button class="edit-toggle-btn">Modifier les infos</button>') +
+      (archived ? "" :
+        '<div class="edit-row">' +
+          '<div><label>Nom</label><input type="text" class="edit-name" value="' + escapeHtml(s.name) + '"></div>' +
+          '<div><label>Rôle</label>' +
+            '<select class="edit-role-select">' +
+              ROLES_ORDER.map(r => '<option value="' + escapeHtml(r) + '"' + (r === s.role ? " selected" : "") + '>' + escapeHtml(r) + '</option>').join("") +
+              '<option value="__custom__"' + (!ROLES_ORDER.includes(s.role) ? " selected" : "") + '>Autre...</option>' +
+            '</select>' +
+            '<input type="text" class="edit-role-custom" placeholder="Nom du rôle" value="' + (!ROLES_ORDER.includes(s.role) ? escapeHtml(s.role) : "") + '" style="' + (!ROLES_ORDER.includes(s.role) ? "" : "display:none;") + ' margin-top:6px;">' +
+          '</div>' +
+          '<div><label>Agence</label><input type="text" class="edit-agency" value="' + escapeHtml(s.agency || "") + '"></div>' +
+          '<div><label>Email</label><input type="email" class="edit-email" value="' + escapeHtml(s.email || "") + '"></div>' +
+          '<div><label>Deuxième email</label><input type="email" class="edit-email2" value="' + escapeHtml(s.email2 || "") + '"></div>' +
+          '<div><label>Lien CV / fiche</label><input type="text" class="edit-cv" value="' + escapeHtml(s.cv || "") + '"></div>' +
+          '<div><label>Lien showreel</label><input type="text" class="edit-showreel" value="' + escapeHtml(s.showreel || "") + '"></div>' +
+          '<div class="full"><label>Disponibilités</label><input type="text" class="edit-availability" value="' + escapeHtml(s.availability || "") + '"></div>' +
+          '<div class="full"><label>Note</label><textarea class="edit-note">' + escapeHtml(s.note || "") + '</textarea></div>' +
+          '<div class="full edit-actions">' +
+            '<button class="edit-save-btn">Enregistrer les modifications</button>' +
+            '<button class="edit-cancel-btn">Annuler</button>' +
+            '<span class="edit-msg"></span>' +
+          '</div>' +
+        '</div>'
+      ) +
+      (archived ? "" :
+        '<div class="scene-row">' +
+          '<label>Scène + consignes</label>' +
+          '<button class="scene-btn">📤 Envoyer par email</button>' +
+          '<span class="scene-sent">' + (s.sceneSentAt ? "Envoyé le " + new Date(s.sceneSentAt).toLocaleDateString("fr-FR") : "") + '</span>' +
+        '</div>'
+      ) +
+      '<div class="vimeo-row">' +
+        '<label>Essai (Vimeo)</label>' +
+        '<input type="text" class="vimeo-input" placeholder="https://vimeo.com/..." value="' + (s.vimeo || "") + '">' +
+        '<button class="vimeo-save">Enregistrer</button>' +
+        '<span class="vimeo-saved-msg"></span>' +
+      '</div>' +
+      '<div class="photo-row">' +
+        '<label>Photo</label>' +
+        '<input type="file" class="photo-input" accept="image/jpeg,image/png,image/jpg">' +
+        '<button class="photo-save">Enregistrer</button>' +
+        '<span class="photo-saved-msg"></span>' +
+      '</div>' +
+      (Array.isArray(s.comments) && s.comments.length > 0 ?
+        '<div class="comments-row"><div class="label">Commentaires client</div>' +
+          s.comments.map(c =>
+            '<div class="comment-item">' + escapeHtml(c.text) +
+            '<div class="meta">' + escapeHtml(c.author) + ' — ' + new Date(c.date).toLocaleDateString("fr-FR") + '</div></div>'
+          ).join("") +
+        '</div>' : ""
+      ) +
+    '</div>';
+
+  const detailsToggleBtn = card.querySelector(".details-toggle-btn");
+  const subDetails = card.querySelector(".sub-details");
+  detailsToggleBtn.addEventListener("click", () => {
+    const isOpen = subDetails.classList.toggle("open");
+    detailsToggleBtn.textContent = isOpen ? "Détails ▴" : "Détails ▾";
+  });
+
+  if (!archived) {
+    const select = card.querySelector(".sub-status-select");
+    select.addEventListener("change", async () => {
+      select.className = "sub-status-select " + select.value;
+      await updateField(s.id, "status", select.value);
+      if (select.value !== "refuse") {
+        await updateField(s.id, "declineReason", "");
+      }
+      loadData();
+    });
+    const declineSelect = card.querySelector(".decline-reason-select");
+    if (declineSelect) {
+      declineSelect.addEventListener("change", async () => {
+        await updateField(s.id, "declineReason", declineSelect.value);
+      });
+    }
+    const archiveBtn = card.querySelector(".archive-btn");
+    archiveBtn.addEventListener("click", async () => {
+      archiveBtn.disabled = true;
+      const ok = await updateField(s.id, "archived", true);
+      if (ok) loadData();
+      else archiveBtn.disabled = false;
+    });
+    const editToggleBtn = card.querySelector(".edit-toggle-btn");
+    const editRow = card.querySelector(".edit-row");
+    editToggleBtn.addEventListener("click", () => {
+      editRow.classList.toggle("open");
+    });
+    const editRoleSelect = card.querySelector(".edit-role-select");
+    const editRoleCustom = card.querySelector(".edit-role-custom");
+    if (editRoleSelect) {
+      editRoleSelect.addEventListener("change", () => {
+        const isCustom = editRoleSelect.value === "__custom__";
+        editRoleCustom.style.display = isCustom ? "block" : "none";
+      });
+    }
+    const editSaveBtn = card.querySelector(".edit-save-btn");
+    const editCancelBtn = card.querySelector(".edit-cancel-btn");
+    const editMsg = card.querySelector(".edit-msg");
+    editCancelBtn.addEventListener("click", () => {
+      editRow.classList.remove("open");
+    });
+    editSaveBtn.addEventListener("click", async () => {
+      let roleValue = s.role;
+      if (editRoleSelect) {
+        roleValue = editRoleSelect.value === "__custom__" ? editRoleCustom.value.trim() : editRoleSelect.value;
+      }
+      const patch = {
+        name: editRow.querySelector(".edit-name").value.trim(),
+        role: roleValue,
+        agency: editRow.querySelector(".edit-agency").value.trim(),
+        email: editRow.querySelector(".edit-email").value.trim(),
+        email2: editRow.querySelector(".edit-email2").value.trim(),
+        cv: editRow.querySelector(".edit-cv").value.trim(),
+        showreel: editRow.querySelector(".edit-showreel").value.trim(),
+        availability: editRow.querySelector(".edit-availability").value.trim(),
+        note: editRow.querySelector(".edit-note").value.trim()
+      };
+      editSaveBtn.disabled = true;
+      editMsg.textContent = "Enregistrement...";
+      try {
+        const res = await fetch("/api/edit-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+          body: JSON.stringify({ id: s.id, patch })
+        });
+        if (!res.ok) throw new Error();
+        editMsg.textContent = "Enregistré ✓";
+        setTimeout(loadData, 600);
+      } catch {
+        editMsg.textContent = "Erreur lors de l'enregistrement.";
+        editSaveBtn.disabled = false;
+      }
+    });
+    const sceneBtn = card.querySelector(".scene-btn");
+    const sceneSentEl = card.querySelector(".scene-sent");
+    sceneBtn.addEventListener("click", async () => {
+      if (!confirm("Envoyer la scène + consignes à " + (s.email || "(aucun email)") + " pour " + s.name + " ?")) return;
+      sceneBtn.disabled = true;
+      sceneSentEl.textContent = "Envoi...";
+      const result = await sendScene(s.id);
+      if (result.ok) {
+        sceneSentEl.textContent = "Envoyé ✓";
+        setTimeout(loadData, 1200);
+      } else {
+        sceneSentEl.textContent = "Erreur : " + (result.error || "inconnue");
+        sceneBtn.disabled = false;
+      }
+    });
+  } else {
+    const restoreBtn = card.querySelector(".restore-btn");
+    restoreBtn.addEventListener("click", async () => {
+      restoreBtn.disabled = true;
+      const ok = await updateField(s.id, "archived", false);
+      if (ok) loadData();
+      else restoreBtn.disabled = false;
+    });
+    const deleteBtn = card.querySelector(".delete-btn");
+    deleteBtn.addEventListener("click", async () => {
+      if (!confirm("Supprimer définitivement la candidature de " + s.name + " ? Cette action est irréversible.")) return;
+      deleteBtn.disabled = true;
+      const ok = await deleteForever(s.id);
+      if (ok) loadData();
+      else deleteBtn.disabled = false;
+    });
+  }
+
+  const vimeoInput = card.querySelector(".vimeo-input");
+  const vimeoBtn = card.querySelector(".vimeo-save");
+  const vimeoMsg = card.querySelector(".vimeo-saved-msg");
+  vimeoBtn.addEventListener("click", async () => {
+    vimeoMsg.textContent = "...";
+    const ok = await updateField(s.id, "vimeo", vimeoInput.value);
+    vimeoMsg.textContent = ok ? "Enregistré ✓" : "Erreur";
+    setTimeout(() => { vimeoMsg.textContent = ""; }, 2000);
+  });
+
+  const photoInput = card.querySelector(".photo-input");
+  const photoBtn = card.querySelector(".photo-save");
+  const photoMsg = card.querySelector(".photo-saved-msg");
+  photoBtn.addEventListener("click", async () => {
+    const file = photoInput.files[0];
+    if (!file) {
+      photoMsg.textContent = "Choisir une photo";
+      setTimeout(() => { photoMsg.textContent = ""; }, 2000);
+      return;
+    }
+    photoMsg.textContent = "...";
+    try {
+      const dataUrl = await resizeImage(file);
+      const ok = await updateField(s.id, "photo", dataUrl);
+      photoMsg.textContent = ok ? "Enregistré ✓" : "Erreur d'enregistrement";
+      if (ok) {
+        const thumb = card.querySelector(".sub-photo");
+        if (thumb.tagName === "IMG") { thumb.src = dataUrl; }
+        else { thumb.outerHTML = '<img class="sub-photo" src="' + dataUrl + '" alt="' + s.name + '">'; }
+      }
+    } catch {
+      photoMsg.textContent = "Format non supporté (utilisez JPG ou PNG)";
+    }
+    setTimeout(() => { photoMsg.textContent = ""; }, 4000);
+  });
+
+  const photoPlaceholder = card.querySelector(".sub-photo[data-photo-id]");
+  if (photoPlaceholder) loadPhotoInto(photoPlaceholder, s.id, s.name);
+
+  return card;
+}
+
+const PAGE_SIZE = 30;
+
+function renderPaginated(group, items, role) {
+  const listEl = document.createElement("div");
+  group.appendChild(listEl);
+  let shown = 0;
+
+  const moreBtn = document.createElement("button");
+  moreBtn.className = "load-more-btn";
+
+  function renderNextBatch() {
+    const batch = items.slice(shown, shown + PAGE_SIZE);
+    batch.forEach(s => listEl.appendChild(buildCard(s)));
+    shown += batch.length;
+    if (shown < items.length) {
+      moreBtn.textContent = "Charger plus (" + (items.length - shown) + " restants)";
+      if (!moreBtn.isConnected) group.appendChild(moreBtn);
+    } else if (moreBtn.isConnected) {
+      moreBtn.remove();
+    }
+  }
+
+  moreBtn.addEventListener("click", renderNextBatch);
+  renderNextBatch();
+}
+
+function render(data) {
+  const all = data.submissions || [];
+  LAST_SUBMISSIONS = all;
+  const active = all.filter(s => !s.archived);
+  const archived = all.filter(s => s.archived);
+
+  const statsEl = document.getElementById("stats");
+  const counts = { confirme: 0, oui: 0, peutetre: 0, non: 0 };
+  active.forEach(s => { counts[normalizeStatus(s.status)]++; });
+  statsEl.innerHTML =
+    '<div class="stat"><div class="num">' + active.length + '</div><div class="label">Total actifs</div></div>' +
+    '<div class="stat"><div class="num">' + counts.confirme + '</div><div class="label">Confirmé</div></div>' +
+    '<div class="stat"><div class="num">' + counts.oui + '</div><div class="label">Oui</div></div>' +
+    '<div class="stat"><div class="num">' + counts.peutetre + '</div><div class="label">Peut-être</div></div>' +
+    '<div class="stat"><div class="num">' + counts.non + '</div><div class="label">Non</div></div>';
+
+  const groupsEl = document.getElementById("groups");
+  groupsEl.innerHTML = "";
+
+  ROLES.forEach(roleObj => {
+    const role = roleObj.name;
+    const items = active
+      .filter(s => s.role === role)
+      .sort((a, b) => {
+        const orderDiff = STATUS_ORDER.indexOf(normalizeStatus(a.status)) - STATUS_ORDER.indexOf(normalizeStatus(b.status));
+        if (orderDiff !== 0) return orderDiff;
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      });
+    const processStatus = roleObj.processStatus || "recherche";
+    const group = document.createElement("div");
+    group.className = "role-group";
+    const header = document.createElement("div");
+    header.className = "role-group-header";
+    header.innerHTML =
+      "<h2>" + role + " (" + items.length + ")</h2>" +
+      '<button class="role-pdf-btn" title="Exporter les Oui de ce rôle en PDF">⬇ PDF</button>' +
+      buildRoleStatusSelect(processStatus);
+    header.querySelector(".role-pdf-btn").addEventListener("click", () => {
+      exportRolePdf(role);
+    });
+    header.querySelector(".role-status-select").addEventListener("change", async (e) => {
+      const val = e.target.value;
+      e.target.className = "role-status-select " + val;
+      await setRoleProcessStatus(roleObj.id, val);
+      loadData();
+    });
+    group.appendChild(header);
+
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Aucune candidature reçue.";
+      group.appendChild(empty);
+    } else {
+      renderPaginated(group, items, role);
+    }
+    groupsEl.appendChild(group);
+  });
+
+  const customRoles = [...new Set(active.filter(s => !ROLES_ORDER.includes(s.role)).map(s => s.role))];
+  customRoles.forEach(role => {
+    const items = active
+      .filter(s => s.role === role)
+      .sort((a, b) => {
+        const orderDiff = STATUS_ORDER.indexOf(normalizeStatus(a.status)) - STATUS_ORDER.indexOf(normalizeStatus(b.status));
+        if (orderDiff !== 0) return orderDiff;
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      });
+    const group = document.createElement("div");
+    group.className = "role-group";
+    const header = document.createElement("div");
+    header.className = "role-group-header";
+    header.innerHTML =
+      "<h2>" + role + " <span style=\"color:var(--gray); font-weight:400; font-size:11px; text-transform:none;\">— hors casting (" + items.length + ")</span></h2>" +
+      '<button class="role-toggle-btn promote-role-btn">Gérer ce rôle</button>';
+    header.querySelector(".promote-role-btn").addEventListener("click", async () => {
+      const btn = header.querySelector(".promote-role-btn");
+      btn.disabled = true;
+      btn.textContent = "...";
+      await fetch("/api/roles-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ name: role, job: "Hors casting", processStatus: "ferme" })
+      });
+      await refreshRoles();
+      loadData();
+    });
+    group.appendChild(header);
+    renderPaginated(group, items, role);
+    groupsEl.appendChild(group);
+  });
+
+  document.getElementById("archive-count").textContent = archived.length;
+  const archiveListEl = document.getElementById("archive-list");
+  archiveListEl.innerHTML = "";
+  if (archived.length === 0) {
+    archiveListEl.innerHTML = '<div class="empty">Aucun profil archivé.</div>';
+  } else {
+    archived
+      .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+      .forEach(s => archiveListEl.appendChild(buildCard(s, { archived: true })));
+  }
+}
+</script>
+</body>
+</html>
