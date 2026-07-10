@@ -74,6 +74,8 @@
   .edit-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
   .copy-link-btn { background: transparent; border: 1px solid var(--confirme); color: var(--confirme); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .copy-link-btn:hover { color: #fff; border-color: var(--confirme); background: var(--confirme); }
+  .single-pdf-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .single-pdf-btn:hover { color: #fff; border-color: var(--peutetre); background: var(--peutetre); }
   .codes-add-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
   .order-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; margin-bottom: 8px; }
   .order-group-select { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 170px; }
@@ -1265,6 +1267,7 @@ function buildCard(s, opts) {
     ) +
     '<button class="details-toggle-btn">Détails ▾</button>' +
     '<button class="copy-link-btn" data-id="' + s.id + '" title="Copier un lien direct vers cette fiche sur la page client">🔗 Lien</button>' +
+    '<button class="single-pdf-btn" data-id="' + s.id + '" title="Exporter uniquement cette fiche en PDF">📄 Fiche PDF</button>' +
     '<div class="sub-details">' +
       '<div class="sub-links">' +
         (s.cv ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "") +
@@ -1344,6 +1347,39 @@ function buildCard(s, opts) {
         setTimeout(() => { copyLinkBtn.textContent = original; }, 1800);
       } catch {
         prompt("Copie ce lien manuellement :", url);
+      }
+    });
+  }
+
+  const singlePdfBtn = card.querySelector(".single-pdf-btn");
+  if (singlePdfBtn) {
+    singlePdfBtn.addEventListener("click", async () => {
+      const original = singlePdfBtn.textContent;
+      singlePdfBtn.disabled = true;
+      singlePdfBtn.textContent = "...";
+      try {
+        const res = await fetch("/api/export?id=" + encodeURIComponent(s.id), {
+          headers: { "x-dashboard-password": PASSWORD }
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          alert("Erreur export : " + (body.error || res.status));
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Fiche_" + s.name.replace(/[^A-Za-z0-9]+/g, "_") + ".pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch {
+        alert("Erreur lors de l'export.");
+      } finally {
+        singlePdfBtn.disabled = false;
+        singlePdfBtn.textContent = original;
       }
     });
   }
