@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORAGE — Fiche comédien</title>
+<style>
+  :root {
+    --dark: #0d1b2a; --dark2: #0a1420; --green: #1a6b3c; --green-light: #2f9a5b;
+    --gray: #8a94a3; --line: rgba(255,255,255,0.12); --card: #12233a; --non: #b3564a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 56px 24px 80px; position: relative; }
+  .corner-logo { position: absolute; top: 24px; right: 24px; height: 90px; opacity: 0.95; }
+  .title-block { text-align: center; margin-bottom: 36px; }
+  .title-block h1 { margin-bottom: 10px; }
+  .elephant-wordmark { height: 18px; opacity: 0.9; }
+  h1 { text-align: center; font-size: 38px; margin: 0 0 6px; letter-spacing: 1px; font-weight: 800; }
+  .role-tag { text-align: center; color: var(--green-light); font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 40px; }
+  .profile-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 28px;
+    display: flex; gap: 26px; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .profile-photo { width: 160px; height: 212px; object-fit: cover; border-radius: 10px; background: #0a1420; box-shadow: 0 6px 18px rgba(0,0,0,0.4); flex-shrink: 0; }
+  .profile-name { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+  .profile-agency { color: var(--gray); font-size: 14px; margin-bottom: 18px; }
+  .profile-links { display: flex; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .profile-links a {
+    color: var(--green-light); text-decoration: none; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--green); border-radius: 6px; padding: 7px 14px;
+  }
+  .profile-links a:hover { background: var(--green); color: #fff; }
+  .vimeo-play-btn {
+    color: var(--green-light); background: transparent; text-decoration: none; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--green); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-family: inherit;
+  }
+  .vimeo-play-btn:hover:not(:disabled) { background: var(--green); color: #fff; }
+  .vimeo-play-btn:disabled { opacity: 0.6; cursor: default; }
+  .vimeo-fallback-link { color: var(--gray); text-decoration: none; font-size: 12px; align-self: center; }
+  .vimeo-fallback-link:hover { color: var(--green-light); text-decoration: underline; }
+  .vimeo-embed-wrap { margin-top: 14px; }
+  .vimeo-embed-wrap iframe { width: 100%; aspect-ratio: 16/9; border-radius: 8px; display: block; }
+  .vimeo-close-btn {
+    display: block; margin-bottom: 8px; background: transparent; border: 1px solid var(--line); color: var(--gray);
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .vimeo-close-btn:hover { color: #fff; border-color: var(--non); }
+  .pending-tag { color: var(--gray); font-size: 12.5px; font-style: italic; }
+  .empty { text-align: center; color: var(--gray); padding: 80px 20px; font-size: 15px; }
+  .site-footer { text-align: center; color: var(--gray); font-size: 12px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .site-footer a { color: var(--gray); text-decoration: none; }
+  .site-footer a:hover { color: var(--green-light); text-decoration: underline; }
+  @media (max-width: 520px) {
+    .profile-card { flex-direction: column; align-items: center; text-align: center; }
+    .profile-links { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap" id="wrap">
+    <div class="empty">Chargement...</div>
+  </div>
+
+<script>
+function escapeHtml(str) {
+  return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+async function load() {
+  const wrap = document.getElementById("wrap");
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  if (!id) {
+    wrap.innerHTML = '<div class="empty">Aucune fiche spécifiée.</div>';
+    return;
+  }
+  try {
+    const res = await fetch("/api/candidate-view?id=" + encodeURIComponent(id), { cache: "no-store" });
+    if (!res.ok) {
+      wrap.innerHTML = '<div class="empty">Cette fiche n\'est plus disponible.</div>';
+      return;
+    }
+    const c = await res.json();
+    document.title = "ORAGE — " + c.name;
+
+    wrap.innerHTML =
+      '<img src="nicolas-logo.png" alt="Nicolas Derouet Casting" class="corner-logo">' +
+      '<div class="title-block"><h1>ORAGE</h1><img src="elephant-logo.png" alt="Elephant" class="elephant-wordmark"></div>' +
+      '<div class="role-tag">' + escapeHtml(c.role) + '</div>' +
+      '<div class="profile-card">' +
+        '<img class="profile-photo" id="profile-photo" alt="' + escapeHtml(c.name) + '">' +
+        '<div>' +
+          '<div class="profile-name">' + escapeHtml(c.name) + '</div>' +
+          '<div class="profile-agency">' + escapeHtml(c.agency || "") + '</div>' +
+          '<div class="profile-links" id="profile-links"></div>' +
+          '<div class="vimeo-embed-wrap" id="vimeo-wrap"></div>' +
+        '</div>' +
+      '</div>' +
+      '<footer class="site-footer">© Nicolas Derouet Casting — <a href="https://www.mrnicolasderouet.com" target="_blank">www.mrnicolasderouet.com</a></footer>';
+
+    loadPhoto(id, c.name);
+    buildLinks(c);
+  } catch (err) {
+    wrap.innerHTML = '<div class="empty">Erreur de chargement.</div>';
+  }
+}
+
+async function loadPhoto(id, name) {
+  const img = document.getElementById("profile-photo");
+  try {
+    const res = await fetch("/api/client-photo?id=" + encodeURIComponent(id) + "&t=" + Date.now(), { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.photo) {
+        img.src = data.photo;
+        return;
+      }
+    }
+  } catch {}
+  img.src = "data:image/svg+xml;utf8," + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="212"><rect width="100%" height="100%" fill="#0a1420"/></svg>'
+  );
+}
+
+function buildLinks(c) {
+  const linksEl = document.getElementById("profile-links");
+  const isValidUrl = (u) => u && /^https?:\/\//i.test(u.trim());
+  let html = "";
+  if (isValidUrl(c.cv)) html += '<a href="' + c.cv + '" target="_blank">CV / fiche</a>';
+  if (isValidUrl(c.showreel)) html += '<a href="' + c.showreel + '" target="_blank">Showreel</a>';
+  if (isValidUrl(c.vimeo)) {
+    html += '<button class="vimeo-play-btn" id="vimeo-btn">▶ Voir l\'essai</button><a class="vimeo-fallback-link" href="' + c.vimeo + '" target="_blank">↗ Ouvrir dans Vimeo</a>';
+  } else {
+    html += '<span class="pending-tag">Essais ou selftape en cours</span>';
+  }
+  linksEl.innerHTML = html;
+
+  const vimeoBtn = document.getElementById("vimeo-btn");
+  if (vimeoBtn) {
+    vimeoBtn.addEventListener("click", async () => {
+      const wrap = document.getElementById("vimeo-wrap");
+      vimeoBtn.disabled = true;
+      vimeoBtn.textContent = "Chargement...";
+      let embedSrc = null;
+      try {
+        const res = await fetch("/api/resolve-vimeo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: c.vimeo.trim() })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.embedUrl) embedSrc = data.embedUrl;
+        }
+      } catch {}
+      if (!embedSrc) {
+        try {
+          const oembedRes = await fetch("https://vimeo.com/api/oembed.json?url=" + encodeURIComponent(c.vimeo.trim()));
+          if (oembedRes.ok) {
+            const data = await oembedRes.json();
+            const match = /src="([^"]+)"/.exec(data.html || "");
+            if (match) embedSrc = match[1];
+          }
+        } catch {}
+      }
+      if (!embedSrc) embedSrc = c.vimeo.trim();
+      wrap.innerHTML =
+        '<button class="vimeo-close-btn">✕ Fermer la vidéo</button>' +
+        '<iframe src="' + embedSrc + '" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>';
+      wrap.querySelector(".vimeo-close-btn").addEventListener("click", () => {
+        wrap.innerHTML = "";
+        vimeoBtn.style.display = "inline-block";
+        vimeoBtn.disabled = false;
+        vimeoBtn.textContent = "▶ Voir l'essai";
+      });
+      vimeoBtn.style.display = "none";
+    });
+  }
+}
+
+load();
+</script>
+</body>
+</html>

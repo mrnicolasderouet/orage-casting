@@ -1266,7 +1266,7 @@ function buildCard(s, opts) {
       '</div>' : ""
     ) +
     '<button class="details-toggle-btn">Détails ▾</button>' +
-    '<button class="copy-link-btn" data-id="' + s.id + '" title="Copier un lien direct vers cette fiche sur la page client">🔗 Lien</button>' +
+    '<button class="copy-link-btn" data-id="' + s.id + '" title="Copier un lien vers une page dédiée à cette fiche">🔗 Lien</button>' +
     '<button class="single-pdf-btn" data-id="' + s.id + '" title="Exporter uniquement cette fiche en PDF">📄 Fiche PDF</button>' +
     '<div class="sub-details">' +
       '<div class="sub-links">' +
@@ -1339,7 +1339,7 @@ function buildCard(s, opts) {
   const copyLinkBtn = card.querySelector(".copy-link-btn");
   if (copyLinkBtn) {
     copyLinkBtn.addEventListener("click", async () => {
-      const url = window.location.origin + "/client#candidate-" + s.id;
+      const url = window.location.origin + "/candidate.html?id=" + encodeURIComponent(s.id);
       try {
         await navigator.clipboard.writeText(url);
         const original = copyLinkBtn.textContent;
