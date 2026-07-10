@@ -8,7 +8,7 @@
   :root {
     --dark: #0d1b2a; --dark2: #0a1420; --green: #1a6b3c; --green-light: #2f9a5b;
     --gray: #8a94a3; --line: rgba(255,255,255,0.12); --card: #12233a;
-    --oui: #2f9a5b; --peutetre: #b39a3a; --non: #b3564a; --archive-c: #6b6f76; --confirme: #8b5cf6;
+    --oui: #2f9a5b; --peutetre: #b39a3a; --non: #b3564a; --archive-c: #6b6f76; --confirme: #8b5cf6; --refuse: #d4622a;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
@@ -64,6 +64,8 @@
   select.peutetre { border-color: var(--peutetre); }
   select.non { border-color: var(--non); }
   select.confirme { border-color: var(--confirme); }
+  select.refuse { border-color: var(--refuse); }
+  .decline-reason-select { background: #0d1826; color: #fff; border: 1px solid var(--refuse); border-radius: 6px; padding: 5px 8px; font-size: 11px; margin-top: 4px; }
   .archive-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .archive-btn:hover { color: #fff; border-color: var(--archive-c); }
   .edit-toggle-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
@@ -319,11 +321,12 @@ let ROLES_ORDER = [];
 let LAST_SUBMISSIONS = [];
 const ROLE_STATUS_LABELS = { recherche: "En recherche", shortlist: "Shortlist en cours", caste: "Casté (confirmé)", ferme: "Fermé" };
 const ROLE_STATUS_ORDER = ["recherche", "shortlist", "caste", "ferme"];
-const STATUS_ORDER = ["confirme", "oui", "peutetre", "non"];
+const STATUS_ORDER = ["confirme", "oui", "peutetre", "non", "refuse"];
 let PASSWORD = "";
 
 function normalizeStatus(status) {
   if (status === "confirme") return "confirme";
+  if (status === "refuse") return "refuse";
   if (["oui", "shortlist", "validated"].includes(status)) return "oui";
   if (["non", "rejected"].includes(status)) return "non";
   return "peutetre";
@@ -1079,15 +1082,23 @@ function buildCard(s, opts) {
   const statusVal = normalizeStatus(s.status);
   card.innerHTML =
     ('<div class="sub-photo" data-photo-id="' + s.id + '"></div>') +
-    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + '</span></div>' +
+    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + (s.declineReason ? ' · <span style="color:var(--refuse);">Refusé — ' + (s.declineReason === "pas_interesse" ? "pas intéressé" : "indisponible") + '</span>' : "") + '</span></div>' +
     (archived ? "" :
       '<div>' +
-      '<select class="' + statusVal + '" data-id="' + s.id + '">' +
+      '<select class="sub-status-select ' + statusVal + '" data-id="' + s.id + '">' +
         '<option value="oui"' + (statusVal === "oui" ? " selected" : "") + '>Oui</option>' +
         '<option value="peutetre"' + (statusVal === "peutetre" ? " selected" : "") + '>Peut-être</option>' +
         '<option value="non"' + (statusVal === "non" ? " selected" : "") + '>Non</option>' +
         '<option value="confirme"' + (statusVal === "confirme" ? " selected" : "") + '>✓ Confirmé</option>' +
+        '<option value="refuse"' + (statusVal === "refuse" ? " selected" : "") + '>✕ Refusé (comédien)</option>' +
       '</select>' +
+      (statusVal === "refuse" ?
+        '<select class="decline-reason-select">' +
+          '<option value=""' + (!s.declineReason ? " selected" : "") + '>Motif...</option>' +
+          '<option value="pas_interesse"' + (s.declineReason === "pas_interesse" ? " selected" : "") + '>Pas intéressé</option>' +
+          '<option value="indisponible"' + (s.declineReason === "indisponible" ? " selected" : "") + '>Indisponible</option>' +
+        '</select>' : ""
+      ) +
       (isCustomRole ? '<div style="font-size:10px; color:var(--gray); max-width:120px; margin-top:4px;">Seul « Confirmé » l\'affiche côté client</div>' : "") +
       '</div>' +
       '<button class="archive-btn">Archiver</button>'
@@ -1161,11 +1172,21 @@ function buildCard(s, opts) {
   });
 
   if (!archived) {
-    const select = card.querySelector("select");
+    const select = card.querySelector(".sub-status-select");
     select.addEventListener("change", async () => {
-      select.className = select.value;
+      select.className = "sub-status-select " + select.value;
       await updateField(s.id, "status", select.value);
+      if (select.value !== "refuse") {
+        await updateField(s.id, "declineReason", "");
+      }
+      loadData();
     });
+    const declineSelect = card.querySelector(".decline-reason-select");
+    if (declineSelect) {
+      declineSelect.addEventListener("change", async () => {
+        await updateField(s.id, "declineReason", declineSelect.value);
+      });
+    }
     const archiveBtn = card.querySelector(".archive-btn");
     archiveBtn.addEventListener("click", async () => {
       archiveBtn.disabled = true;
