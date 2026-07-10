@@ -1,4 +1,4 @@
-const { listSubmissions, getPhoto } = require("./_redis");
+const { listSubmissions, getSubmission, getPhoto } = require("./_redis");
 const PDFDocument = require("pdfkit");
 
 const GREEN = "#1A6B3C";
@@ -148,6 +148,30 @@ module.exports = async (req, res) => {
     return;
   }
   try {
+    const singleId = req.query && req.query.id;
+    if (singleId) {
+      const sub = await getSubmission(singleId);
+      if (!sub) {
+        res.status(404).json({ error: "Candidature introuvable" });
+        return;
+      }
+      const buffer = await generatePdfBuffer(async (doc) => {
+        doc.fontSize(30).fillColor(DARK).font("Helvetica-Bold")
+          .text("ORAGE", { align: "center" });
+        doc.moveDown(0.3);
+        doc.fontSize(9).fillColor(GRAY).font("Helvetica-Oblique")
+          .text(`Généré le ${new Date().toLocaleDateString("fr-FR")}`, { align: "center" });
+        doc.moveDown(1);
+        drawRoleHeader(doc, sub.role);
+        await drawCandidate(doc, sub, 0, true);
+      });
+      const safeName = (sub.name || "profil").replace(/[^A-Za-z0-9]+/g, "_");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="ORAGE_${safeName}.pdf"`);
+      res.status(200).send(buffer);
+      return;
+    }
+
     const statusFilter = (req.query && req.query.status) || "oui";
     const isFullRoster = statusFilter === "all";
     const roleFilter = req.query && req.query.role ? decodeURIComponent(req.query.role) : null;
