@@ -51,7 +51,9 @@ module.exports = async (req, res) => {
     });
 
     if (!searchRes.ok) {
-      res.status(502).json({ error: "Erreur lors de la recherche" });
+      const errBody = await searchRes.text().catch(() => "");
+      console.error("Serper API error", searchRes.status, errBody);
+      res.status(502).json({ error: "Erreur lors de la recherche", debugPreview: `HTTP ${searchRes.status} — ${errBody.slice(0, 300)}` });
       return;
     }
 
@@ -70,6 +72,9 @@ module.exports = async (req, res) => {
     res.status(200).json({ results });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erreur serveur", detail: String(err && err.message) });
+    res.status(500).json({
+      error: "Erreur serveur",
+      debugPreview: `${err && err.name}: ${err && err.message}`
+    });
   }
 };
