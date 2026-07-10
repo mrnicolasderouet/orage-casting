@@ -309,6 +309,47 @@
   .grid-tile .gt-badges { margin-top: 6px; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
   .grid-tile.is-confirme { border-color: var(--confirme); }
 
+  /* ===== Self-tapes & relances ===== */
+  .tape-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 8px; border: 1px solid; margin-top: 5px; letter-spacing: 0.3px; }
+  .tape-badge.tape-ok { color: var(--oui); border-color: var(--oui); }
+  .tape-badge.tape-wait { color: var(--gray); border-color: var(--line); }
+  .tape-badge.tape-late { color: var(--peutetre); border-color: var(--peutetre); }
+  .remind-btn { background: transparent; border: 1px solid var(--non); color: var(--non); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .remind-btn:hover { background: var(--non); color: #fff; }
+  .remind-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
+  .essai-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .essai-row label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .essai-mode-select { background: #0d1826; border: 1px solid var(--line); border-radius: 6px; color: #fff; padding: 6px 8px; font-size: 12px; }
+  .essai-date-input { background: #0d1826; border: 1px solid var(--line); border-radius: 6px; color: #fff; padding: 5px 8px; font-size: 12px; color-scheme: dark; }
+  .essai-save { background: var(--green); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .essai-save:hover { opacity: 0.85; }
+  .essai-msg { font-size: 11px; color: var(--oui); white-space: nowrap; }
+  .planning-day { margin-bottom: 22px; }
+  .planning-day h4 { font-size: 13px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 0 0 8px; }
+  .planning-item { display: grid; grid-template-columns: 60px 1.4fr 1fr 1fr; gap: 10px; align-items: center; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 13px; }
+  .planning-item .p-time { font-weight: 800; color: var(--peutetre); }
+  .planning-item .p-name { font-weight: 700; }
+  .planning-item .p-role { color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .planning-item .p-agency { color: var(--gray); font-size: 11.5px; text-align: right; }
+  .booking-link-btn { background: transparent; border: 1px solid var(--confirme); color: var(--confirme); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .booking-link-btn:hover { background: var(--confirme); color: #fff; }
+  .booking-invite-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .booking-invite-btn:hover { background: var(--peutetre); color: #fff; }
+  .booking-invite-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
+  .slot-admin-day { margin-bottom: 20px; }
+  .slot-admin-day h4 { font-size: 13px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 0 0 8px; }
+  .slot-admin-item { display: flex; align-items: center; gap: 12px; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
+  .slot-admin-item .sa-time { font-weight: 800; color: var(--peutetre); min-width: 52px; }
+  .slot-admin-item .sa-meta { color: var(--gray); font-size: 11.5px; }
+  .slot-admin-item .sa-status { flex: 1; font-size: 12.5px; }
+  .slot-admin-item .sa-status.libre { color: var(--oui); }
+  .slot-admin-item .sa-status.reserve { color: var(--confirme); font-weight: 700; }
+  .slot-admin-item .sa-status.bloque { color: var(--gray); }
+  .slot-admin-item button { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+  .slot-admin-item button:hover { color: #fff; border-color: var(--green-light); }
+  .slot-admin-item button.sa-delete { border-color: var(--non); color: var(--non); }
+  .slot-admin-item button.sa-delete:hover { background: var(--non); color: #fff; }
+
   /* ===== Mode mobile ===== */
   @media (max-width: 640px) {
     .wrap { padding: 20px 12px 60px; }
@@ -347,7 +388,10 @@
     .role-manage-item .rm-edit-row.open { grid-template-columns: 1fr; }
     .role-manage-item .rm-row1 { flex-wrap: wrap; }
     .import-row { grid-template-columns: 1fr; }
-    .vimeo-row, .scene-row, .photo-row { flex-wrap: wrap; }
+    .vimeo-row, .scene-row, .photo-row, .essai-row { flex-wrap: wrap; }
+    .essai-mode-select, .essai-date-input { flex: 1 1 100%; }
+    .planning-item { grid-template-columns: 52px 1fr; }
+    .planning-item .p-agency { text-align: left; }
     .vimeo-input { flex: 1 1 100%; }
     .order-item { flex-wrap: wrap; }
     .order-group-select { width: 100%; }
@@ -382,6 +426,7 @@
       <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
         <button class="refresh" id="refresh">↻ Actualiser</button>
         <button class="refresh" id="toggle-view" style="border-color:var(--green-light);color:var(--green-light);">▦ Vue grille</button>
+        <button class="refresh" id="open-planning" style="border-color:var(--peutetre);color:var(--peutetre);">📅 Planning essais</button>
         <button class="refresh" id="export-oui" style="border-color:var(--oui);color:var(--oui);">⬇ Exporter les « Oui » (PDF)</button>
         <button class="refresh" id="export-peutetre" style="border-color:var(--peutetre);color:var(--peutetre);">⬇ Exporter les « Peut-être » (PDF)</button>
         <button class="refresh" id="open-client" style="border-color:var(--green-light);color:var(--green-light);">↗ Ouvrir la page client</button>
@@ -389,6 +434,46 @@
         <button class="refresh" id="toggle-roles-panel" style="border-color:var(--confirme);color:var(--confirme);">🎭 Gérer les rôles</button>
         <button class="refresh" id="toggle-order-panel" style="border-color:var(--confirme);color:var(--confirme);">🔝 Ordre d'affichage</button>
         <button class="refresh" id="toggle-import-panel" style="border-color:var(--oui);color:var(--oui);">📥 Importer une liste</button>
+        <button class="refresh" id="toggle-slots-panel" style="border-color:var(--peutetre);color:var(--peutetre);">🗓 Créneaux d'essais</button>
+      </div>
+
+      <div id="slots-panel" class="add-profile-panel" style="display:none;">
+        <h3>🗓 Créneaux d'essais — réservation en ligne</h3>
+        <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">Crée des journées de casting : les agences réservent, déplacent ou annulent via le lien personnel de chaque candidat (bouton « 📩 Inviter à réserver » sur les fiches en présentiel). Chaque réservation met automatiquement à jour la convocation et le planning.</p>
+        <form id="create-slots-form">
+          <div>
+            <label>Date *</label>
+            <input type="date" name="date" required style="color-scheme:dark;">
+          </div>
+          <div>
+            <label>Durée d'un créneau</label>
+            <select name="duration">
+              <option value="10">10 min</option>
+              <option value="15">15 min</option>
+              <option value="20" selected>20 min</option>
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 h</option>
+            </select>
+          </div>
+          <div>
+            <label>Heure de début *</label>
+            <input type="time" name="startTime" required value="14:00" style="color-scheme:dark;">
+          </div>
+          <div>
+            <label>Heure de fin *</label>
+            <input type="time" name="endTime" required value="18:00" style="color-scheme:dark;">
+          </div>
+          <div class="full">
+            <label>Lieu (optionnel)</label>
+            <input type="text" name="location" placeholder="ex: Studio — 12 rue des Essais, Paris 11e">
+          </div>
+          <div class="full add-profile-actions">
+            <button type="submit">Générer les créneaux</button>
+            <span class="add-profile-msg" id="create-slots-msg"></span>
+          </div>
+        </form>
+        <div id="slots-list" style="margin-top:20px;"></div>
       </div>
 
       <div id="import-panel" class="add-profile-panel" style="display:none;">
@@ -1566,6 +1651,254 @@ async function sendScene(id) {
   }
 }
 
+async function sendReminder(id) {
+  try {
+    const res = await fetch("/api/send-reminder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ id })
+    });
+    const body = await res.json().catch(() => ({}));
+    return { ok: res.ok, error: body.error, detail: body.detail };
+  } catch {
+    return { ok: false, error: "Erreur de connexion" };
+  }
+}
+
+const TAPE_LATE_DAYS = 4;
+
+function daysSince(iso) {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+function toLocalDatetimeValue(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+
+// Deux situations : self-tape OU casting présentiel.
+// Sans type explicite, on considère "self-tape" si une scène a été envoyée ou une vidéo reçue (rétrocompatible).
+function essaiStateFor(s) {
+  const mode = s.essaiMode || ((s.sceneSentAt || s.vimeo) ? "selftape" : "");
+  if (mode === "presentiel") {
+    if (s.essaiDate) {
+      const d = new Date(s.essaiDate);
+      const dateStr = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+      if (d.getTime() < Date.now()) {
+        return { cls: "tape-ok", icon: "🎥", label: "🎥 Essai passé le " + dateStr, waiting: false };
+      }
+      return { cls: "tape-wait", icon: "📅", label: "📅 Convoqué le " + dateStr + " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), waiting: false };
+    }
+    return { cls: "tape-late", icon: "📅", label: "📅 Présentiel — à convoquer", waiting: false };
+  }
+  if (mode === "selftape") {
+    if (s.vimeo) return { cls: "tape-ok", icon: "🎬", label: "🎬 Self-tape reçue", waiting: false };
+    if (s.sceneSentAt) {
+      const dd = daysSince(s.sceneSentAt);
+      return { cls: dd >= TAPE_LATE_DAYS ? "tape-late" : "tape-wait", icon: "⏳", label: "⏳ Self-tape attendue — J+" + dd, waiting: true };
+    }
+    return { cls: "tape-wait", icon: "🎬", label: "🎬 Self-tape — scène à envoyer", waiting: false };
+  }
+  return null;
+}
+
+document.getElementById("open-planning").addEventListener("click", openPlanningModal);
+
+// ===== Panneau Créneaux d'essais (réservation en ligne) =====
+let SLOTS = [];
+
+document.getElementById("toggle-slots-panel").addEventListener("click", () => {
+  const panel = document.getElementById("slots-panel");
+  const opening = panel.style.display === "none";
+  panel.style.display = opening ? "block" : "none";
+  if (opening) refreshSlots();
+});
+
+async function refreshSlots() {
+  const listEl = document.getElementById("slots-list");
+  listEl.innerHTML = '<div class="empty">Chargement des créneaux...</div>';
+  try {
+    const res = await fetch("/api/slots-admin?t=" + Date.now(), {
+      headers: { "x-dashboard-password": PASSWORD },
+      cache: "no-store"
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      listEl.innerHTML = '<div class="empty">Erreur : ' + escapeHtml(body.error || res.status) + '</div>';
+      return;
+    }
+    const data = await res.json();
+    SLOTS = data.slots || [];
+    renderSlotsList();
+  } catch {
+    listEl.innerHTML = '<div class="empty">Erreur de connexion.</div>';
+  }
+}
+
+function renderSlotsList() {
+  const listEl = document.getElementById("slots-list");
+  listEl.innerHTML = "";
+  if (SLOTS.length === 0) {
+    listEl.innerHTML = '<div class="empty">Aucun créneau créé pour le moment.</div>';
+    return;
+  }
+  const groups = {};
+  const order = [];
+  SLOTS.forEach(s => {
+    const key = new Date(s.start).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(s);
+  });
+  order.forEach(day => {
+    const dayEl = document.createElement("div");
+    dayEl.className = "slot-admin-day";
+    const booked = groups[day].filter(s => s.bookedBy).length;
+    dayEl.innerHTML = '<h4>' + escapeHtml(day) + ' — ' + groups[day].length + ' créneau(x), ' + booked + ' réservé(s)</h4>';
+    groups[day].forEach(s => {
+      const row = document.createElement("div");
+      row.className = "slot-admin-item";
+      const time = new Date(s.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      let statusHtml, actionsHtml;
+      if (s.bookedBy) {
+        const cand = LAST_SUBMISSIONS.find(x => x.id === s.bookedBy);
+        statusHtml = '<span class="sa-status reserve">🎭 ' + escapeHtml(cand ? cand.name + " — " + cand.role : "Candidat " + s.bookedBy) + '</span>';
+        actionsHtml = '<button class="sa-free">Libérer</button><button class="sa-delete">Supprimer</button>';
+      } else if (s.blocked) {
+        statusHtml = '<span class="sa-status bloque">⛔ Bloqué</span>';
+        actionsHtml = '<button class="sa-unblock">Débloquer</button><button class="sa-delete">Supprimer</button>';
+      } else {
+        statusHtml = '<span class="sa-status libre">✓ Libre</span>';
+        actionsHtml = '<button class="sa-block">Bloquer</button><button class="sa-delete">Supprimer</button>';
+      }
+      row.innerHTML =
+        '<span class="sa-time">' + time + '</span>' +
+        '<span class="sa-meta">' + s.durationMin + ' min' + (s.location ? ' · ' + escapeHtml(s.location) : "") + '</span>' +
+        statusHtml + actionsHtml;
+      const wire = (cls, action, confirmMsg) => {
+        const btn = row.querySelector(cls);
+        if (!btn) return;
+        btn.addEventListener("click", async () => {
+          if (confirmMsg && !confirm(confirmMsg)) return;
+          btn.disabled = true;
+          await slotAction(action, s.id);
+        });
+      };
+      wire(".sa-block", "block");
+      wire(".sa-unblock", "unblock");
+      wire(".sa-free", "free", "Libérer ce créneau ? La convocation sera retirée de la fiche du candidat (pense à prévenir l'agence).");
+      wire(".sa-delete", "delete", s.bookedBy ? "Supprimer ce créneau RÉSERVÉ ? La convocation sera retirée de la fiche du candidat." : "Supprimer ce créneau ?");
+      dayEl.appendChild(row);
+    });
+    listEl.appendChild(dayEl);
+  });
+}
+
+async function slotAction(action, slotId) {
+  try {
+    const res = await fetch("/api/slots-admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ action, slotId })
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert("Erreur : " + (body.error || res.status));
+    }
+  } catch {
+    alert("Erreur de connexion.");
+  }
+  await refreshSlots();
+  if (action === "free" || action === "delete") loadData();
+}
+
+document.getElementById("create-slots-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const msg = document.getElementById("create-slots-msg");
+  const data = Object.fromEntries(new FormData(form).entries());
+  const dur = Number(data.duration) || 20;
+  const startD = new Date(data.date + "T" + data.startTime);
+  const endD = new Date(data.date + "T" + data.endTime);
+  if (isNaN(startD) || isNaN(endD) || endD <= startD) {
+    msg.textContent = "Horaires invalides.";
+    return;
+  }
+  const newSlots = [];
+  let cur = startD;
+  while (cur.getTime() + dur * 60000 <= endD.getTime()) {
+    newSlots.push({ start: cur.toISOString(), durationMin: dur, location: (data.location || "").trim() });
+    cur = new Date(cur.getTime() + dur * 60000);
+  }
+  if (newSlots.length === 0) {
+    msg.textContent = "La plage horaire est trop courte pour un créneau de " + dur + " min.";
+    return;
+  }
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  msg.textContent = "Création de " + newSlots.length + " créneau(x)...";
+  try {
+    const res = await fetch("/api/slots-admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ action: "create-batch", slots: newSlots })
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      msg.textContent = "Erreur : " + (body.error || res.status);
+      return;
+    }
+    msg.textContent = newSlots.length + " créneau(x) créé(s) ✓";
+    await refreshSlots();
+  } catch {
+    msg.textContent = "Erreur de connexion.";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function openPlanningModal() {
+  const subs = LAST_SUBMISSIONS.filter(s => !s.archived && s.essaiMode === "presentiel");
+  const modal = openModal("📅 Planning des essais", "Candidats en casting présentiel, groupés par journée.", { wide: true });
+  if (subs.length === 0) {
+    modal.body.innerHTML = '<div class="empty">Aucun candidat en essai présentiel pour le moment.<br>Définis le « Type d\'essai » dans les détails d\'une fiche pour l\'ajouter ici.</div>';
+    return;
+  }
+  const dated = subs.filter(s => s.essaiDate).sort((a, b) => new Date(a.essaiDate) - new Date(b.essaiDate));
+  const undated = subs.filter(s => !s.essaiDate).sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
+  const buildItem = (s, time) =>
+    '<div class="planning-item">' +
+      '<span class="p-time">' + time + '</span>' +
+      '<span class="p-name">' + escapeHtml(s.name) + '</span>' +
+      '<span class="p-role">' + escapeHtml(s.role) + '</span>' +
+      '<span class="p-agency">' + escapeHtml(s.agency || "") + '</span>' +
+    '</div>';
+
+  const groups = {};
+  const groupOrder = [];
+  dated.forEach(s => {
+    const key = new Date(s.essaiDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+    groups[key].push(s);
+  });
+
+  let html = "";
+  groupOrder.forEach(day => {
+    html += '<div class="planning-day"><h4>' + escapeHtml(day) + ' — ' + groups[day].length + ' essai(s)</h4>' +
+      groups[day].map(s => buildItem(s, new Date(s.essaiDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }))).join("") +
+    '</div>';
+  });
+  if (undated.length > 0) {
+    html += '<div class="planning-day"><h4>À convoquer — sans date (' + undated.length + ')</h4>' +
+      undated.map(s => buildItem(s, "—")).join("") +
+    '</div>';
+  }
+  modal.body.innerHTML = html;
+}
+
 async function deleteForever(id) {
   try {
     const res = await fetch("/api/delete", {
@@ -1639,9 +1972,12 @@ function buildCard(s, opts) {
   const card = document.createElement("div");
   card.className = "sub-card" + (archived ? " is-archived" : "");
   const statusVal = normalizeStatus(s.status);
+  const tape = archived ? null : essaiStateFor(s);
   card.innerHTML =
     ('<div class="sub-photo" data-photo-id="' + s.id + '"></div>') +
-    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.agentName ? " · Agent : " + escapeHtml(s.agentName) : "") + (s.assistantName ? " · Ass. : " + escapeHtml(s.assistantName) : "") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + (s.internalStatus ? ' · <span class="internal-status-tag">' + INTERNAL_STATUS_LABELS[s.internalStatus] + '</span>' : "") + '</span></div>' +
+    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.agentName ? " · Agent : " + escapeHtml(s.agentName) : "") + (s.assistantName ? " · Ass. : " + escapeHtml(s.assistantName) : "") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + (s.internalStatus ? ' · <span class="internal-status-tag">' + INTERNAL_STATUS_LABELS[s.internalStatus] + '</span>' : "") + '</span>' +
+    (tape ? '<div><span class="tape-badge ' + tape.cls + '">' + tape.label + '</span></div>' : "") +
+    '</div>' +
     (archived ? "" :
       '<div>' +
       '<select class="sub-status-select ' + statusVal + '" data-id="' + s.id + '">' +
@@ -1701,15 +2037,35 @@ function buildCard(s, opts) {
         '</div>'
       ) +
       (archived ? "" :
+        '<div class="essai-row">' +
+          '<label>Type d\'essai</label>' +
+          '<select class="essai-mode-select">' +
+            '<option value=""' + (!s.essaiMode ? " selected" : "") + '>— Non défini —</option>' +
+            '<option value="selftape"' + (s.essaiMode === "selftape" ? " selected" : "") + '>Self-tape</option>' +
+            '<option value="presentiel"' + (s.essaiMode === "presentiel" ? " selected" : "") + '>Casting présentiel</option>' +
+          '</select>' +
+          '<input type="datetime-local" class="essai-date-input" value="' + toLocalDatetimeValue(s.essaiDate) + '" style="' + (s.essaiMode === "presentiel" ? "" : "display:none;") + '">' +
+          '<button class="essai-save">Enregistrer</button>' +
+          '<span class="essai-msg"></span>' +
+          (s.essaiMode === "presentiel" ?
+            '<button class="booking-link-btn" title="Copier le lien personnel de réservation de créneau">🔗 Lien réservation</button>' +
+            '<button class="booking-invite-btn" title="Envoyer à l\'agence l\'email avec le lien de réservation">📩 Inviter à réserver</button>' +
+            '<span class="booking-invite-info">' + (s.bookingInviteSentAt ? "Invitation envoyée le " + new Date(s.bookingInviteSentAt).toLocaleDateString("fr-FR") : "") + '</span>'
+          : "") +
+        '</div>'
+      ) +
+      (archived ? "" :
         '<div class="scene-row">' +
           '<label>Scène + consignes</label>' +
           '<button class="scene-btn">📤 Envoyer par email</button>' +
           '<span class="scene-sent">' + (s.sceneSentAt ? "Envoyé le " + new Date(s.sceneSentAt).toLocaleDateString("fr-FR") : "") + '</span>' +
+          (tape && tape.waiting ? '<button class="remind-btn">🔔 Relancer l\'agence</button>' : "") +
+          '<span class="remind-info">' + (s.reminderSentAt ? "Relancé le " + new Date(s.reminderSentAt).toLocaleDateString("fr-FR") + (s.reminderCount > 1 ? " (×" + s.reminderCount + ")" : "") : "") + '</span>' +
         '</div>'
       ) +
       '<div class="vimeo-row">' +
-        '<label>Essai (Vimeo)</label>' +
-        '<input type="text" class="vimeo-input" placeholder="https://vimeo.com/..." value="' + (s.vimeo || "") + '">' +
+        '<label>Self-tape / essai</label>' +
+        '<input type="text" class="vimeo-input" placeholder="https://... (Vimeo, WeTransfer, Drive)" value="' + (s.vimeo || "") + '">' +
         '<button class="vimeo-save">Enregistrer</button>' +
         '<span class="vimeo-saved-msg"></span>' +
       '</div>' +
@@ -1873,6 +2229,84 @@ function buildCard(s, opts) {
         sceneBtn.disabled = false;
       }
     });
+    const essaiModeSelect = card.querySelector(".essai-mode-select");
+    if (essaiModeSelect) {
+      const essaiDateInput = card.querySelector(".essai-date-input");
+      const essaiSaveBtn = card.querySelector(".essai-save");
+      const essaiMsg = card.querySelector(".essai-msg");
+      essaiModeSelect.addEventListener("change", () => {
+        essaiDateInput.style.display = essaiModeSelect.value === "presentiel" ? "" : "none";
+      });
+      essaiSaveBtn.addEventListener("click", async () => {
+        essaiMsg.textContent = "...";
+        const mode = essaiModeSelect.value;
+        let ok = await updateField(s.id, "essaiMode", mode);
+        if (ok) {
+          const dateVal = (mode === "presentiel" && essaiDateInput.value) ? new Date(essaiDateInput.value).toISOString() : "";
+          ok = await updateField(s.id, "essaiDate", dateVal);
+        }
+        essaiMsg.textContent = ok ? "Enregistré ✓" : "Erreur";
+        if (ok) setTimeout(loadData, 800);
+      });
+      const bookingLinkBtn = card.querySelector(".booking-link-btn");
+      if (bookingLinkBtn) {
+        bookingLinkBtn.addEventListener("click", async () => {
+          const url = window.location.origin + "/booking.html?id=" + encodeURIComponent(s.id);
+          try {
+            await navigator.clipboard.writeText(url);
+            const original = bookingLinkBtn.textContent;
+            bookingLinkBtn.textContent = "✓ Copié !";
+            setTimeout(() => { bookingLinkBtn.textContent = original; }, 1800);
+          } catch {
+            prompt("Copie ce lien manuellement :", url);
+          }
+        });
+      }
+      const bookingInviteBtn = card.querySelector(".booking-invite-btn");
+      if (bookingInviteBtn) {
+        const inviteInfo = card.querySelector(".booking-invite-info");
+        bookingInviteBtn.addEventListener("click", async () => {
+          if (!confirm("Envoyer l'invitation à réserver un créneau à " + (s.email || "(aucun email)") + " pour " + s.name + " ?")) return;
+          bookingInviteBtn.disabled = true;
+          inviteInfo.textContent = "Envoi...";
+          try {
+            const res = await fetch("/api/send-booking-invite", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+              body: JSON.stringify({ id: s.id })
+            });
+            const body = await res.json().catch(() => ({}));
+            if (res.ok) {
+              inviteInfo.textContent = "Invitation envoyée ✓";
+              setTimeout(loadData, 1200);
+            } else {
+              inviteInfo.textContent = "Erreur : " + (body.error || res.status);
+              bookingInviteBtn.disabled = false;
+            }
+          } catch {
+            inviteInfo.textContent = "Erreur de connexion.";
+            bookingInviteBtn.disabled = false;
+          }
+        });
+      }
+    }
+    const remindBtn = card.querySelector(".remind-btn");
+    if (remindBtn) {
+      const remindInfo = card.querySelector(".remind-info");
+      remindBtn.addEventListener("click", async () => {
+        if (!confirm("Relancer " + (s.agency || "l'agence") + " (" + (s.email || "aucun email") + ") pour la self-tape de " + s.name + " ?")) return;
+        remindBtn.disabled = true;
+        remindInfo.textContent = "Envoi...";
+        const result = await sendReminder(s.id);
+        if (result.ok) {
+          remindInfo.textContent = "Relancé ✓";
+          setTimeout(loadData, 1200);
+        } else {
+          remindInfo.textContent = "Erreur : " + (result.error || "inconnue");
+          remindBtn.disabled = false;
+        }
+      });
+    }
   } else {
     const restoreBtn = card.querySelector(".restore-btn");
     restoreBtn.addEventListener("click", async () => {
@@ -1896,9 +2330,14 @@ function buildCard(s, opts) {
   const vimeoMsg = card.querySelector(".vimeo-saved-msg");
   vimeoBtn.addEventListener("click", async () => {
     vimeoMsg.textContent = "...";
-    const ok = await updateField(s.id, "vimeo", vimeoInput.value);
+    const val = vimeoInput.value.trim();
+    const ok = await updateField(s.id, "vimeo", val);
+    if (ok) {
+      await updateField(s.id, "selftapeReceivedAt", val ? new Date().toISOString() : "");
+    }
     vimeoMsg.textContent = ok ? "Enregistré ✓" : "Erreur";
     setTimeout(() => { vimeoMsg.textContent = ""; }, 2000);
+    if (ok) setTimeout(loadData, 800);
   });
 
   const photoInput = card.querySelector(".photo-input");
@@ -1964,7 +2403,10 @@ function buildGridTile(s) {
     '<div class="gt-agency">' + escapeHtml(s.agency || "—") + '</div>' +
     '<div class="gt-badges">' +
       '<span class="cmp-status ' + statusVal + '">' + statusLabel(statusVal, gender) + '</span>' +
-      (s.vimeo ? '<span class="cmp-status confirme" title="Essai disponible">🎬</span>' : "") +
+      (function () {
+        const st = essaiStateFor(s);
+        return st ? '<span class="tape-badge ' + st.cls + '" title="' + escapeHtml(st.label) + '">' + st.icon + '</span>' : "";
+      })() +
     '</div>';
   fetchPhotoCached(s.id).then(photo => {
     const ph = tile.querySelector('[data-gt-photo]');
@@ -2021,12 +2463,16 @@ function render(data) {
   const statsEl = document.getElementById("stats");
   const counts = { confirme: 0, oui: 0, peutetre: 0, non: 0 };
   active.forEach(s => { counts[normalizeStatus(s.status)]++; });
+  const waitingTapes = active.filter(s => { const st = essaiStateFor(s); return st && st.waiting; }).length;
+  const upcomingEssais = active.filter(s => s.essaiMode === "presentiel" && s.essaiDate && new Date(s.essaiDate).getTime() >= Date.now()).length;
   statsEl.innerHTML =
     '<div class="stat"><div class="num">' + active.length + '</div><div class="label">Total actifs</div></div>' +
     '<div class="stat"><div class="num">' + counts.confirme + '</div><div class="label">Confirmé</div></div>' +
     '<div class="stat"><div class="num">' + counts.oui + '</div><div class="label">Oui</div></div>' +
     '<div class="stat"><div class="num">' + counts.peutetre + '</div><div class="label">Peut-être</div></div>' +
-    '<div class="stat"><div class="num">' + counts.non + '</div><div class="label">Non</div></div>';
+    '<div class="stat"><div class="num">' + counts.non + '</div><div class="label">Non</div></div>' +
+    (waitingTapes > 0 ? '<div class="stat"><div class="num" style="color:var(--peutetre);">' + waitingTapes + '</div><div class="label">⏳ Self-tapes attendues</div></div>' : "") +
+    (upcomingEssais > 0 ? '<div class="stat"><div class="num" style="color:var(--confirme);">' + upcomingEssais + '</div><div class="label">📅 Essais à venir</div></div>' : "");
 
   const groupsEl = document.getElementById("groups");
   groupsEl.innerHTML = "";

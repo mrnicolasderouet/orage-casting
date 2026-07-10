@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORAGE — Réservation d'essai</title>
+<style>
+  :root {
+    --dark: #0d1b2a; --dark2: #0a1420; --green: #1a6b3c; --green-light: #2f9a5b;
+    --gray: #8a94a3; --line: rgba(255,255,255,0.12); --card: #12233a;
+    --peutetre: #b39a3a; --non: #b3564a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: linear-gradient(160deg, var(--dark), var(--dark2)); color: #f4f6f8; min-height: 100vh; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 40px 16px 80px; }
+  h1 { text-align: center; font-size: 38px; margin: 0 0 4px; letter-spacing: 1px; font-weight: 800; }
+  .subtitle { text-align: center; color: var(--gray); font-size: 14px; margin-bottom: 26px; }
+  .candidate-banner { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; text-align: center; margin-bottom: 26px; }
+  .candidate-banner .c-name { font-size: 18px; font-weight: 800; }
+  .candidate-banner .c-role { color: var(--green-light); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+  .current-slot { background: var(--card); border: 1px solid var(--green-light); border-radius: 12px; padding: 18px 20px; margin-bottom: 26px; }
+  .current-slot h3 { margin: 0 0 6px; font-size: 14px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; }
+  .current-slot .cs-when { font-size: 17px; font-weight: 800; }
+  .current-slot .cs-loc { color: var(--gray); font-size: 13px; margin-top: 3px; }
+  .cs-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .cs-actions button { flex: 1; min-width: 140px; padding: 11px 14px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-move { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); }
+  .btn-move:hover { background: var(--peutetre); color: #fff; }
+  .btn-cancel { background: transparent; border: 1px solid var(--non); color: var(--non); }
+  .btn-cancel:hover { background: var(--non); color: #fff; }
+  .deadline-note { font-size: 12px; color: var(--gray); margin-top: 10px; }
+  .day-group { margin-bottom: 24px; }
+  .day-group h3 { font-size: 14px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin: 0 0 12px; }
+  .slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 10px; }
+  .slot-btn {
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    color: #fff; padding: 13px 8px; font-size: 15px; font-weight: 700; cursor: pointer; text-align: center;
+  }
+  .slot-btn small { display: block; font-weight: 400; font-size: 10.5px; color: var(--gray); margin-top: 3px; }
+  .slot-btn:hover:not(:disabled) { border-color: var(--green-light); background: rgba(47,154,91,0.12); }
+  .slot-btn:disabled { opacity: 0.5; cursor: wait; }
+  .msg { text-align: center; padding: 14px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: none; }
+  .msg.ok { display: block; background: rgba(47,154,91,0.15); border: 1px solid var(--green-light); color: var(--green-light); }
+  .msg.err { display: block; background: rgba(179,86,74,0.15); border: 1px solid var(--non); color: #e8988c; }
+  .empty { text-align: center; color: var(--gray); padding: 50px 0; line-height: 1.6; }
+  .section-title { font-size: 15px; margin: 0 0 14px; color: #fff; }
+  .site-footer { text-align: center; color: var(--gray); font-size: 12px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); }
+  .site-footer a { color: var(--gray); text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>ORAGE</h1>
+    <div class="subtitle">Réservation de créneau d'essai — Nicolas Derouet Casting</div>
+    <div id="content"><div class="empty">Chargement...</div></div>
+    <footer class="site-footer">
+      © Nicolas Derouet Casting — <a href="https://www.mrnicolasderouet.com" target="_blank">www.mrnicolasderouet.com</a>
+    </footer>
+  </div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const SUB_ID = params.get("id") || "";
+let DATA = null;
+let moveMode = false;
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
+
+function fmtDay(iso) {
+  return new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+async function load() {
+  const content = document.getElementById("content");
+  if (!SUB_ID) {
+    content.innerHTML = '<div class="empty">Lien de réservation invalide.<br>Merci d\'utiliser le lien reçu par email.</div>';
+    return;
+  }
+  try {
+    const res = await fetch("/api/booking?id=" + encodeURIComponent(SUB_ID) + "&t=" + Date.now(), { cache: "no-store" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      content.innerHTML = '<div class="empty">' + escapeHtml(data.error || "Lien de réservation invalide.") + '</div>';
+      return;
+    }
+    DATA = data;
+    render();
+  } catch {
+    content.innerHTML = '<div class="empty">Erreur de chargement. Merci de réessayer.</div>';
+  }
+}
+
+function render(message, isError) {
+  const content = document.getElementById("content");
+  const d = DATA;
+  let html =
+    '<div class="candidate-banner">' +
+      '<div class="c-name">' + escapeHtml(d.candidate.name) + '</div>' +
+      '<div class="c-role">Rôle : ' + escapeHtml(d.candidate.role) + '</div>' +
+    '</div>' +
+    '<div class="msg ' + (message ? (isError ? "err" : "ok") : "") + '">' + escapeHtml(message || "") + '</div>';
+
+  const canModify = d.mySlot && (new Date(d.mySlot.start).getTime() - Date.now() >= d.deadlineHours * 3600 * 1000);
+  const isPast = d.mySlot && new Date(d.mySlot.start).getTime() < Date.now();
+
+  if (d.mySlot) {
+    html +=
+      '<div class="current-slot">' +
+        '<h3>' + (isPast ? "Essai passé" : "Votre rendez-vous") + '</h3>' +
+        '<div class="cs-when">' + escapeHtml(fmtDay(d.mySlot.start)) + ' à ' + fmtTime(d.mySlot.start) + '</div>' +
+        (d.mySlot.location ? '<div class="cs-loc">📍 ' + escapeHtml(d.mySlot.location) + '</div>' : "") +
+        (!isPast ? (
+          canModify ?
+            '<div class="cs-actions">' +
+              '<button class="btn-move" id="btn-move">' + (moveMode ? "Garder ce créneau" : "↔ Déplacer le rendez-vous") + '</button>' +
+              '<button class="btn-cancel" id="btn-cancel">✕ Annuler le rendez-vous</button>' +
+            '</div>' :
+            '<div class="deadline-note">⚠ À moins de ' + d.deadlineHours + 'h de l\'essai, le rendez-vous ne peut plus être modifié en ligne. En cas d\'empêchement, contactez casting@mrnicolasderouet.com.</div>'
+        ) : "") +
+      '</div>';
+  }
+
+  const showSlots = !d.mySlot || moveMode || isPast;
+  if (showSlots) {
+    if (d.available.length === 0) {
+      html += '<div class="empty">Aucun créneau disponible pour le moment.<br>De nouveaux créneaux peuvent être ajoutés — revenez consulter cette page, ou contactez casting@mrnicolasderouet.com.</div>';
+    } else {
+      html += '<p class="section-title">' + (moveMode ? "Choisissez votre nouveau créneau :" : "Choisissez votre créneau :") + '</p>';
+      const groups = {};
+      const order = [];
+      d.available.forEach(s => {
+        const key = fmtDay(s.start);
+        if (!groups[key]) { groups[key] = []; order.push(key); }
+        groups[key].push(s);
+      });
+      order.forEach(day => {
+        html += '<div class="day-group"><h3>' + escapeHtml(day) + '</h3><div class="slot-grid">' +
+          groups[day].map(s =>
+            '<button class="slot-btn" data-slot="' + s.id + '">' + fmtTime(s.start) +
+            '<small>' + s.durationMin + ' min' + (s.location ? " · " + escapeHtml(s.location) : "") + '</small></button>'
+          ).join("") +
+        '</div></div>';
+      });
+    }
+  }
+
+  content.innerHTML = html;
+
+  const moveBtn = document.getElementById("btn-move");
+  if (moveBtn) moveBtn.addEventListener("click", () => { moveMode = !moveMode; render(); });
+  const cancelBtn = document.getElementById("btn-cancel");
+  if (cancelBtn) cancelBtn.addEventListener("click", async () => {
+    if (!confirm("Confirmer l'annulation du rendez-vous ?")) return;
+    cancelBtn.disabled = true;
+    await doAction({ action: "cancel" }, "Rendez-vous annulé. Vous pouvez réserver un nouveau créneau ci-dessous.");
+  });
+  content.querySelectorAll(".slot-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const slotId = btn.dataset.slot;
+      const slot = DATA.available.find(s => s.id === slotId);
+      if (!confirm("Confirmer le rendez-vous du " + fmtDay(slot.start) + " à " + fmtTime(slot.start) + " ?")) return;
+      content.querySelectorAll(".slot-btn").forEach(b => b.disabled = true);
+      await doAction({ action: "book", slotId }, "Rendez-vous confirmé ! Un email de confirmation vous a été envoyé.");
+    });
+  });
+}
+
+async function doAction(payload, successMessage) {
+  try {
+    const res = await fetch("/api/booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: SUB_ID, ...payload })
+    });
+    const data = await res.json().catch(() => ({}));
+    moveMode = false;
+    if (!res.ok) {
+      await reloadData();
+      render(data.error || "Une erreur est survenue. Merci de réessayer.", true);
+      return;
+    }
+    await reloadData();
+    render(successMessage, false);
+  } catch {
+    render("Erreur de connexion. Merci de réessayer.", true);
+  }
+}
+
+async function reloadData() {
+  try {
+    const res = await fetch("/api/booking?id=" + encodeURIComponent(SUB_ID) + "&t=" + Date.now(), { cache: "no-store" });
+    if (res.ok) DATA = await res.json();
+  } catch {}
+}
+
+load();
+</script>
+</body>
+</html>
