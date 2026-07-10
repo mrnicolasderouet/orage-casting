@@ -334,9 +334,11 @@ const INTERNAL_STATUS_LABELS = {
   indisponible: "Indisponible",
   interesse: "Intéressé",
   refuse_pas_interesse: "Refusé — pas intéressé",
-  rappeler_plus_tard: "À rappeler plus tard"
+  rappeler_plus_tard: "À rappeler plus tard",
+  essais_disponibles: "Essais disponibles",
+  essais_en_cours: "Essais en cours"
 };
-const INTERNAL_STATUS_ORDER = ["", "a_contacter", "attente_retour", "disponible", "indisponible", "interesse", "refuse_pas_interesse", "rappeler_plus_tard"];
+const INTERNAL_STATUS_ORDER = ["", "a_contacter", "attente_retour", "disponible", "indisponible", "interesse", "essais_en_cours", "essais_disponibles", "refuse_pas_interesse", "rappeler_plus_tard"];
 let PASSWORD = "";
 
 function normalizeStatus(status) {
@@ -967,11 +969,11 @@ async function exportDocx(status) {
 }
 
 async function exportRolePdf(role) {
-  const choice = prompt('Exporter le PDF de "' + role + '" pour quel statut ?\n\nTape : oui, peutetre, confirme ou non', "oui");
+  const choice = prompt('Exporter le PDF de "' + role + '" pour quel statut ?\n\nTape : oui, peutetre, confirme, non — ou "all" pour un rapport complet (tous les statuts avec précisions, à destination des producteurs)', "oui");
   if (!choice) return;
   const status = choice.trim().toLowerCase();
-  if (!["oui", "peutetre", "confirme", "non"].includes(status)) {
-    alert('Statut non reconnu. Tape exactement : oui, peutetre, confirme ou non.');
+  if (!["oui", "peutetre", "confirme", "non", "all"].includes(status)) {
+    alert('Statut non reconnu. Tape exactement : oui, peutetre, confirme, non ou all.');
     return;
   }
   try {
