@@ -1,6 +1,6 @@
 const { updateSubmission } = require("./_redis");
 
-const ALLOWED_FIELDS = ["role", "name", "email", "email2", "agency", "cv", "showreel", "availability", "note"];
+const ALLOWED_FIELDS = ["role", "name", "email", "email2", "agency", "agentName", "assistantName", "cv", "showreel", "availability", "note"];
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {

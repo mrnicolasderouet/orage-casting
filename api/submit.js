@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { role, name, email, agency, cv, showreel, availability, note, photo, agentPassword } = req.body || {};
+    const { role, name, email, agency, agentName, assistantName, cv, showreel, availability, note, photo, agentPassword } = req.body || {};
     if (!role || !name) {
       res.status(400).json({ error: "Rôle et nom du comédien requis" });
       return;
@@ -55,6 +55,8 @@ module.exports = async (req, res) => {
       name,
       email,
       agency: agency || "",
+      agentName: agentName || "",
+      assistantName: assistantName || "",
       cv: cv || "",
       showreel: showreel || "",
       availability: availability || "",

@@ -1,6 +1,6 @@
 const { updateSubmission } = require("./_redis");
 
-const ALLOWED_FIELDS = ["status", "vimeo", "photo", "archived", "role", "name", "email", "email2", "agency", "cv", "showreel", "availability", "note", "displayOrder", "displayGroup", "declineReason", "internalStatus"];
+const ALLOWED_FIELDS = ["status", "vimeo", "photo", "archived", "role", "name", "email", "email2", "agency", "agentName", "assistantName", "cv", "showreel", "availability", "note", "displayOrder", "displayGroup", "declineReason", "internalStatus"];
 const MAX_PHOTO_BASE64_LENGTH = 1.5 * 1024 * 1024;
 
 module.exports = async (req, res) => {
