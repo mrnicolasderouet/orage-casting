@@ -39,6 +39,11 @@
   .candidate {
     background: #0d1826; border: 1px solid var(--line); border-radius: 12px;
     padding: 20px; margin-bottom: 16px; display: grid; grid-template-columns: 140px 1fr; gap: 22px;
+    transition: box-shadow 0.4s ease, border-color 0.4s ease;
+  }
+  .candidate-highlight, .confirmed-card.candidate-highlight {
+    border-color: var(--green-light) !important;
+    box-shadow: 0 0 0 3px rgba(47, 154, 91, 0.35);
   }
   .candidate:last-child { margin-bottom: 0; }
   .candidate-photo { width: 140px; height: 186px; object-fit: cover; border-radius: 8px; background: #0a1420; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
@@ -121,9 +126,26 @@ async function load() {
     }
     const data = await viewRes.json();
     render(data.submissions || [], data.confirmed || []);
+    scrollToHighlightedCandidate();
   } catch (err) {
     content.innerHTML = '<div class="empty">Erreur de chargement : ' + (err && err.message ? err.message : "inconnue") + '</div>';
   }
+}
+
+function scrollToHighlightedCandidate() {
+  const hash = window.location.hash;
+  if (!hash || !hash.startsWith("#candidate-")) return;
+  const target = document.querySelector(hash);
+  if (!target) return;
+  const group = target.closest(".role-group");
+  if (group && !group.classList.contains("open")) {
+    group.classList.add("open");
+  }
+  setTimeout(() => {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("candidate-highlight");
+    setTimeout(() => target.classList.remove("candidate-highlight"), 2500);
+  }, 150);
 }
 
 function firstName(fullName) {
@@ -167,6 +189,7 @@ function buildConfirmedSection(confirmed) {
     g.items.forEach(s => {
       const card = document.createElement("div");
       card.className = "confirmed-card";
+      card.id = "candidate-" + s.id;
       card.innerHTML =
         '<div class="confirmed-photo" data-photo-id="' + s.id + '"></div>' +
         '<div class="confirmed-name">' + escapeHtml(s.name) + '</div>' +
@@ -269,6 +292,7 @@ async function loadPhotoInto(placeholderEl, id, name) {
 function buildCandidate(s) {
   const el = document.createElement("div");
   el.className = "candidate";
+  el.id = "candidate-" + s.id;
   const comments = (s.comments || []).map(c =>
     '<div class="comment">' + escapeHtml(c.text) +
     '<div class="meta">' + escapeHtml(c.author) + ' — ' + new Date(c.date).toLocaleDateString("fr-FR") + '</div></div>'

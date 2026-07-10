@@ -72,6 +72,8 @@
   .archive-btn:hover { color: #fff; border-color: var(--archive-c); }
   .edit-toggle-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .edit-toggle-btn:hover { color: #fff; border-color: var(--green-light); }
+  .copy-link-btn { background: transparent; border: 1px solid var(--confirme); color: var(--confirme); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .copy-link-btn:hover { color: #fff; border-color: var(--confirme); background: var(--confirme); }
   .codes-add-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
   .order-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; margin-bottom: 8px; }
   .order-group-select { background: #0a1420; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; width: 170px; }
@@ -1262,6 +1264,7 @@ function buildCard(s, opts) {
       '</div>' : ""
     ) +
     '<button class="details-toggle-btn">Détails ▾</button>' +
+    '<button class="copy-link-btn" data-id="' + s.id + '" title="Copier un lien direct vers cette fiche sur la page client">🔗 Lien</button>' +
     '<div class="sub-details">' +
       '<div class="sub-links">' +
         (s.cv ? '<a href="' + s.cv + '" target="_blank">CV / fiche</a>' : "") +
@@ -1329,6 +1332,21 @@ function buildCard(s, opts) {
     const isOpen = subDetails.classList.toggle("open");
     detailsToggleBtn.textContent = isOpen ? "Détails ▴" : "Détails ▾";
   });
+
+  const copyLinkBtn = card.querySelector(".copy-link-btn");
+  if (copyLinkBtn) {
+    copyLinkBtn.addEventListener("click", async () => {
+      const url = window.location.origin + "/client#candidate-" + s.id;
+      try {
+        await navigator.clipboard.writeText(url);
+        const original = copyLinkBtn.textContent;
+        copyLinkBtn.textContent = "✓ Copié !";
+        setTimeout(() => { copyLinkBtn.textContent = original; }, 1800);
+      } catch {
+        prompt("Copie ce lien manuellement :", url);
+      }
+    });
+  }
 
   if (!archived) {
     const select = card.querySelector(".sub-status-select");
