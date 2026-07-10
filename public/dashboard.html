@@ -208,6 +208,162 @@
   .delete-btn { background: transparent; border: 1px solid var(--non); color: var(--non); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .delete-btn:hover { background: var(--non); color: #fff; }
   .archive-actions { display: flex; gap: 6px; }
+
+  /* ===== Modale générique ===== */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(4, 10, 18, 0.72); z-index: 1000;
+    display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto;
+  }
+  .modal-box {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px 26px; width: 100%; max-width: 560px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.6); position: relative;
+  }
+  .modal-box.wide { max-width: 1040px; }
+  .modal-box h3 { margin: 0 0 4px; font-size: 17px; padding-right: 32px; }
+  .modal-sub { color: var(--gray); font-size: 12px; margin-bottom: 18px; }
+  .modal-close {
+    position: absolute; top: 14px; right: 14px; background: transparent; border: 1px solid var(--line);
+    color: var(--gray); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 14px; line-height: 1;
+  }
+  .modal-close:hover { color: #fff; border-color: var(--green-light); }
+
+  /* ===== Modale d'export PDF ===== */
+  .export-choice-grid { display: flex; flex-direction: column; gap: 8px; }
+  .export-choice-btn {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: #0d1826; border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; color: #fff; font-size: 13.5px; font-weight: 700; cursor: pointer; text-align: left;
+  }
+  .export-choice-btn small { color: var(--gray); font-weight: 400; font-size: 11.5px; }
+  .export-choice-btn:hover { border-color: var(--green-light); }
+  .export-choice-btn.c-oui:hover { border-color: var(--oui); }
+  .export-choice-btn.c-peutetre:hover { border-color: var(--peutetre); }
+  .export-choice-btn.c-confirme:hover { border-color: var(--confirme); }
+  .export-choice-btn.c-non:hover { border-color: var(--non); }
+  .export-choice-btn:disabled { opacity: 0.5; cursor: wait; }
+  .export-modal-msg { font-size: 12px; color: var(--non); margin-top: 12px; min-height: 16px; }
+
+  /* ===== Comparateur ===== */
+  .compare-btn { background: var(--card); border: 1px solid var(--confirme); color: var(--confirme); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .compare-btn:hover { background: var(--confirme); color: #fff; }
+  .compare-select-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .compare-select-item {
+    background: #0d1826; border: 2px solid var(--line); border-radius: 10px; padding: 10px;
+    cursor: pointer; text-align: center; transition: border-color 0.12s ease;
+  }
+  .compare-select-item:hover { border-color: var(--gray); }
+  .compare-select-item.selected { border-color: var(--confirme); }
+  .compare-select-item img, .compare-select-item .cmp-nophoto {
+    width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 6px; background: #0a1420;
+    display: block; margin-bottom: 8px;
+  }
+  .compare-select-item .cmp-nophoto { display: flex; align-items: center; justify-content: center; color: var(--gray); font-size: 10px; }
+  .compare-select-item .cmp-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; }
+  .compare-select-item .cmp-agency { font-size: 10.5px; color: var(--gray); margin-top: 2px; }
+  .compare-select-item .cmp-status { display: inline-block; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 8px; margin-top: 6px; border: 1px solid; }
+  .cmp-status.oui { color: var(--oui); border-color: var(--oui); }
+  .cmp-status.peutetre { color: var(--peutetre); border-color: var(--peutetre); }
+  .cmp-status.non { color: var(--non); border-color: var(--non); }
+  .cmp-status.confirme { color: var(--confirme); border-color: var(--confirme); }
+  .compare-launch-row { display: flex; align-items: center; gap: 12px; }
+  .compare-launch-btn { background: var(--confirme); border: none; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .compare-launch-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .compare-launch-hint { font-size: 12px; color: var(--gray); }
+  .compare-scroller { overflow-x: auto; padding-bottom: 6px; }
+  .compare-columns { display: flex; gap: 14px; align-items: stretch; }
+  .compare-col {
+    flex: 1 0 220px; min-width: 220px; max-width: 300px; background: #0d1826;
+    border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column;
+  }
+  .compare-col img.cmp-photo, .compare-col .cmp-nophoto-big {
+    width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 8px; background: #0a1420; display: block; margin-bottom: 10px;
+  }
+  .compare-col .cmp-nophoto-big { display: flex; align-items: center; justify-content: center; color: var(--gray); font-size: 11px; }
+  .compare-col .cc-name { font-size: 15px; font-weight: 800; }
+  .compare-col .cc-agency { font-size: 11px; color: var(--gray); margin-top: 2px; margin-bottom: 8px; }
+  .compare-field { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .compare-field .cf-label { font-size: 9.5px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .compare-field .cf-value { font-size: 12.5px; color: #d7dde3; line-height: 1.4; word-break: break-word; }
+  .compare-field .cf-value a { color: var(--green-light); text-decoration: none; display: block; }
+  .compare-field .cf-value a:hover { text-decoration: underline; }
+  .compare-field .cf-comment { padding-left: 7px; border-left: 2px solid var(--peutetre); margin-bottom: 5px; }
+  .compare-field .cf-comment .meta { color: var(--gray); font-size: 10px; }
+  .compare-back-btn { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 7px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 14px; }
+  .compare-back-btn:hover { color: #fff; border-color: var(--green-light); }
+
+  /* ===== Vue grille (trombinoscope) ===== */
+  .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .grid-tile {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+    cursor: pointer; text-align: center; transition: transform 0.12s ease, border-color 0.12s ease;
+  }
+  .grid-tile:hover { border-color: var(--green-light); transform: translateY(-2px); }
+  .grid-tile img, .grid-tile .gt-nophoto {
+    width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 6px; background: #0a1420;
+    display: block; margin-bottom: 8px;
+  }
+  .grid-tile .gt-nophoto { display: flex; align-items: center; justify-content: center; color: var(--gray); font-size: 10px; }
+  .grid-tile .gt-name { font-size: 12.5px; font-weight: 700; line-height: 1.25; }
+  .grid-tile .gt-agency { font-size: 10.5px; color: var(--gray); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .grid-tile .gt-badges { margin-top: 6px; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+  .grid-tile.is-confirme { border-color: var(--confirme); }
+
+  /* ===== Mode mobile ===== */
+  @media (max-width: 640px) {
+    .wrap { padding: 20px 12px 60px; }
+    h1 { font-size: 22px; }
+    .sub { margin-bottom: 20px; }
+    .stats { gap: 8px; }
+    .stat { padding: 10px 14px; min-width: calc(50% - 4px); flex: 1; }
+    .stat .num { font-size: 20px; }
+
+    /* Boutons et champs : cibles tactiles confortables, 16px pour éviter le zoom iOS */
+    .refresh { padding: 10px 12px; font-size: 13px; }
+    input, select, textarea, button { font-size: 16px !important; }
+    .sub-card select, .sub-card button { min-height: 42px; }
+    .role-status-select, .role-pdf-btn, .compare-btn, .role-toggle-btn, .role-collapse-btn { min-height: 40px; }
+
+    /* En-têtes de rôle : passage à la ligne propre */
+    .role-group-header { flex-wrap: wrap; row-gap: 8px; }
+    .role-group-header h2 { flex: 1 1 auto; font-size: 14px; min-width: 60%; }
+    .role-status-select { flex: 1 1 100%; }
+
+    /* Cartes candidat : photo + nom sur la première ligne, actions en dessous */
+    .sub-card { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; }
+    .sub-photo { width: 64px; height: 84px; flex-shrink: 0; }
+    .sub-name { flex: 1; min-width: 0; font-size: 14px; }
+    .sub-card > div:not(.sub-details):not(.sub-photo) { flex: 1 1 100%; }
+    .sub-status-select, .internal-status-select { width: 100%; }
+    .archive-btn, .details-toggle-btn, .copy-link-btn, .single-pdf-btn { flex: 1 1 calc(50% - 5px); text-align: center; }
+    .archive-actions { flex: 1 1 100%; }
+    .archive-actions button { flex: 1; min-height: 42px; }
+
+    /* Détails et formulaires : une seule colonne */
+    .sub-details .sub-links { flex-wrap: wrap; }
+    .edit-row.open { grid-template-columns: 1fr; }
+    .add-profile-panel { padding: 16px; }
+    .add-profile-panel form { grid-template-columns: 1fr; }
+    .role-manage-item .rm-edit-row.open { grid-template-columns: 1fr; }
+    .role-manage-item .rm-row1 { flex-wrap: wrap; }
+    .import-row { grid-template-columns: 1fr; }
+    .vimeo-row, .scene-row, .photo-row { flex-wrap: wrap; }
+    .vimeo-input { flex: 1 1 100%; }
+    .order-item { flex-wrap: wrap; }
+    .order-group-select { width: 100%; }
+
+    /* Modales : plein écran ou presque */
+    .modal-overlay { padding: 12px 8px; align-items: stretch; }
+    .modal-box { padding: 16px 14px 20px; max-height: none; }
+    .compare-select-grid { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
+    .compare-col { flex: 1 0 200px; min-width: 200px; }
+    .compare-launch-btn { flex: 1; min-height: 44px; }
+
+    /* Vue grille : 2-3 vignettes par ligne */
+    .grid-list { grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
+    .grid-tile { padding: 7px; }
+    .grid-tile .gt-name { font-size: 11.5px; }
+  }
 </style>
 </head>
 <body>
@@ -225,6 +381,7 @@
       <div class="sub">Candidatures reçues des agences</div>
       <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
         <button class="refresh" id="refresh">↻ Actualiser</button>
+        <button class="refresh" id="toggle-view" style="border-color:var(--green-light);color:var(--green-light);">▦ Vue grille</button>
         <button class="refresh" id="export-oui" style="border-color:var(--oui);color:var(--oui);">⬇ Exporter les « Oui » (PDF)</button>
         <button class="refresh" id="export-peutetre" style="border-color:var(--peutetre);color:var(--peutetre);">⬇ Exporter les « Peut-être » (PDF)</button>
         <button class="refresh" id="open-client" style="border-color:var(--green-light);color:var(--green-light);">↗ Ouvrir la page client</button>
@@ -1085,22 +1242,72 @@ async function exportDocx(status) {
   }
 }
 
-async function exportRolePdf(role) {
-  const choice = prompt('Exporter le PDF de "' + role + '" pour quel statut ?\n\nTape : oui, peutetre, confirme, non — ou "all" pour un rapport complet (tous les statuts avec précisions, à destination des producteurs)', "oui");
-  if (!choice) return;
-  const status = choice.trim().toLowerCase();
-  if (!["oui", "peutetre", "confirme", "non", "all"].includes(status)) {
-    alert('Statut non reconnu. Tape exactement : oui, peutetre, confirme, non ou all.');
-    return;
-  }
+// ===== Modale générique =====
+function openModal(title, subtitle, opts) {
+  opts = opts || {};
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  const box = document.createElement("div");
+  box.className = "modal-box" + (opts.wide ? " wide" : "");
+  box.innerHTML =
+    '<button class="modal-close" title="Fermer">✕</button>' +
+    '<h3>' + escapeHtml(title) + '</h3>' +
+    (subtitle ? '<div class="modal-sub">' + escapeHtml(subtitle) + '</div>' : "") +
+    '<div class="modal-body"></div>';
+  overlay.appendChild(box);
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  box.querySelector(".modal-close").addEventListener("click", close);
+  document.body.appendChild(overlay);
+  return { overlay, box, body: box.querySelector(".modal-body"), close };
+}
+
+// ===== Export PDF d'un rôle (modale de choix du statut) =====
+function exportRolePdf(role) {
+  const modal = openModal('Exporter « ' + role + ' » en PDF', "Choisis les fiches à inclure dans le document.");
+  const choices = [
+    { status: "oui", cls: "c-oui", label: "Les « Oui »", hint: "Sélection principale" },
+    { status: "peutetre", cls: "c-peutetre", label: "Les « Peut-être »", hint: "Seconde liste" },
+    { status: "confirme", cls: "c-confirme", label: "Les confirmés", hint: "Casting validé" },
+    { status: "non", cls: "c-non", label: "Les « Non »", hint: "Profils écartés" },
+    { status: "all", cls: "", label: "Rapport complet", hint: "Tous les statuts avec précisions — à destination des producteurs" }
+  ];
+  const grid = document.createElement("div");
+  grid.className = "export-choice-grid";
+  const msg = document.createElement("div");
+  msg.className = "export-modal-msg";
+  choices.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "export-choice-btn " + c.cls;
+    btn.innerHTML = '<span>' + c.label + '</span><small>' + c.hint + '</small>';
+    btn.addEventListener("click", async () => {
+      grid.querySelectorAll("button").forEach(b => b.disabled = true);
+      msg.style.color = "var(--gray)";
+      msg.textContent = "Génération du PDF...";
+      const ok = await doExportRolePdf(role, c.status, msg);
+      if (ok) modal.close();
+      else grid.querySelectorAll("button").forEach(b => b.disabled = false);
+    });
+    grid.appendChild(btn);
+  });
+  modal.body.appendChild(grid);
+  modal.body.appendChild(msg);
+}
+
+async function doExportRolePdf(role, status, msgEl) {
   try {
     const res = await fetch("/api/export?status=" + status + "&role=" + encodeURIComponent(role), {
       headers: { "x-dashboard-password": PASSWORD }
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      alert("Erreur export : " + (body.error || res.status));
-      return;
+      if (msgEl) { msgEl.style.color = "var(--non)"; msgEl.textContent = "Erreur export : " + (body.error || res.status); }
+      return false;
     }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -1111,9 +1318,161 @@ async function exportRolePdf(role) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    return true;
   } catch {
-    alert("Erreur lors de l'export.");
+    if (msgEl) { msgEl.style.color = "var(--non)"; msgEl.textContent = "Erreur lors de l'export."; }
+    return false;
   }
+}
+
+// ===== Comparateur de candidats =====
+const COMPARE_MIN = 2;
+const COMPARE_MAX = 4;
+const PHOTO_CACHE = {};
+
+async function fetchPhotoCached(id) {
+  if (id in PHOTO_CACHE) return PHOTO_CACHE[id];
+  try {
+    const res = await fetch("/api/photo?id=" + encodeURIComponent(id), {
+      headers: { "x-dashboard-password": PASSWORD },
+      cache: "no-store"
+    });
+    if (!res.ok) { PHOTO_CACHE[id] = null; return null; }
+    const data = await res.json();
+    PHOTO_CACHE[id] = data.photo || null;
+    return PHOTO_CACHE[id];
+  } catch {
+    return null;
+  }
+}
+
+function statusLabel(statusVal, gender) {
+  if (statusVal === "confirme") return genderize("Confirmé", "Confirmée", gender);
+  if (statusVal === "oui") return "Oui";
+  if (statusVal === "non") return "Non";
+  return "Peut-être";
+}
+
+function openCompareModal(role, items) {
+  const candidates = items.filter(s => !s.archived);
+  if (candidates.length < COMPARE_MIN) return;
+  const roleObj = ROLES.find(r => r.name === role);
+  const gender = roleObj ? roleObj.gender : "";
+  const modal = openModal("Comparer — " + role, "Sélectionne de " + COMPARE_MIN + " à " + COMPARE_MAX + " candidats, puis lance la comparaison.", { wide: true });
+  const selected = new Set();
+
+  const grid = document.createElement("div");
+  grid.className = "compare-select-grid";
+  const launchRow = document.createElement("div");
+  launchRow.className = "compare-launch-row";
+  const launchBtn = document.createElement("button");
+  launchBtn.className = "compare-launch-btn";
+  launchBtn.disabled = true;
+  const hint = document.createElement("span");
+  hint.className = "compare-launch-hint";
+  launchRow.appendChild(launchBtn);
+  launchRow.appendChild(hint);
+
+  const refreshLaunch = () => {
+    launchBtn.textContent = "Comparer (" + selected.size + ")";
+    launchBtn.disabled = selected.size < COMPARE_MIN || selected.size > COMPARE_MAX;
+    hint.textContent = selected.size > COMPARE_MAX ? "Maximum " + COMPARE_MAX + " candidats." :
+      selected.size < COMPARE_MIN ? "Encore " + (COMPARE_MIN - selected.size) + " à sélectionner." : "";
+  };
+
+  candidates.forEach(s => {
+    const statusVal = normalizeStatus(s.status);
+    const item = document.createElement("div");
+    item.className = "compare-select-item";
+    item.innerHTML =
+      '<div class="cmp-nophoto" data-cmp-photo="' + s.id + '">Photo...</div>' +
+      '<div class="cmp-name">' + escapeHtml(s.name) + '</div>' +
+      '<div class="cmp-agency">' + escapeHtml(s.agency || "—") + '</div>' +
+      '<span class="cmp-status ' + statusVal + '">' + statusLabel(statusVal, gender) + '</span>';
+    item.addEventListener("click", () => {
+      if (selected.has(s.id)) {
+        selected.delete(s.id);
+        item.classList.remove("selected");
+      } else {
+        if (selected.size >= COMPARE_MAX) return;
+        selected.add(s.id);
+        item.classList.add("selected");
+      }
+      refreshLaunch();
+    });
+    grid.appendChild(item);
+    fetchPhotoCached(s.id).then(photo => {
+      const ph = item.querySelector('[data-cmp-photo]');
+      if (!ph) return;
+      if (photo) ph.outerHTML = '<img src="' + photo + '" alt="' + escapeHtml(s.name) + '">';
+      else ph.textContent = "Pas de photo";
+    });
+  });
+
+  launchBtn.addEventListener("click", () => {
+    const chosen = candidates.filter(s => selected.has(s.id));
+    renderComparison(modal, role, gender, candidates, chosen);
+  });
+
+  modal.body.appendChild(grid);
+  modal.body.appendChild(launchRow);
+  refreshLaunch();
+}
+
+function renderComparison(modal, role, gender, candidates, chosen) {
+  modal.body.innerHTML = "";
+  const backBtn = document.createElement("button");
+  backBtn.className = "compare-back-btn";
+  backBtn.textContent = "← Modifier la sélection";
+  backBtn.addEventListener("click", () => {
+    modal.close();
+    openCompareModal(role, candidates);
+  });
+  modal.body.appendChild(backBtn);
+
+  const scroller = document.createElement("div");
+  scroller.className = "compare-scroller";
+  const cols = document.createElement("div");
+  cols.className = "compare-columns";
+
+  const field = (label, valueHtml) =>
+    '<div class="compare-field"><div class="cf-label">' + label + '</div><div class="cf-value">' + (valueHtml || "—") + '</div></div>';
+
+  chosen.forEach(s => {
+    const statusVal = normalizeStatus(s.status);
+    const col = document.createElement("div");
+    col.className = "compare-col";
+    const links =
+      (s.cv ? '<a href="' + escapeHtml(s.cv) + '" target="_blank">CV / fiche ↗</a>' : "") +
+      (s.showreel ? '<a href="' + escapeHtml(s.showreel) + '" target="_blank">Showreel ↗</a>' : "") +
+      (s.vimeo ? '<a href="' + escapeHtml(s.vimeo) + '" target="_blank">Essai (Vimeo) ↗</a>' : "");
+    const comments = Array.isArray(s.comments) && s.comments.length > 0 ?
+      s.comments.map(c =>
+        '<div class="cf-comment">' + escapeHtml(c.text) +
+        '<div class="meta">' + escapeHtml(c.author) + ' — ' + new Date(c.date).toLocaleDateString("fr-FR") + '</div></div>'
+      ).join("") : "";
+    col.innerHTML =
+      '<div class="cmp-nophoto-big" data-cmp-photo="' + s.id + '">Photo...</div>' +
+      '<div class="cc-name">' + escapeHtml(s.name) + '</div>' +
+      '<div class="cc-agency">' + escapeHtml(s.agency || "—") + (s.agentName ? " · " + escapeHtml(s.agentName) : "") + '</div>' +
+      '<span class="cmp-status ' + statusVal + '">' + statusLabel(statusVal, gender) + '</span>' +
+      (s.internalStatus ? field("Suivi interne", escapeHtml(INTERNAL_STATUS_LABELS[s.internalStatus] || s.internalStatus)) : "") +
+      field("Disponibilités", escapeHtml(s.availability || "")) +
+      field("Note", escapeHtml(s.note || "")) +
+      (links ? field("Liens", links) : "") +
+      (s.sceneSentAt ? field("Scène envoyée", new Date(s.sceneSentAt).toLocaleDateString("fr-FR")) : "") +
+      (comments ? field("Commentaires client", comments) : "");
+    cols.appendChild(col);
+    fetchPhotoCached(s.id).then(photo => {
+      const ph = col.querySelector('[data-cmp-photo]');
+      if (!ph) return;
+      if (photo) ph.outerHTML = '<img class="cmp-photo" src="' + photo + '" alt="' + escapeHtml(s.name) + '">';
+      else ph.textContent = "Pas de photo";
+    });
+  });
+
+  scroller.appendChild(cols);
+  modal.body.appendChild(scroller);
 }
 
 async function tryEnter() {
@@ -1576,8 +1935,54 @@ function buildCard(s, opts) {
 
 const PAGE_SIZE = 30;
 
+let VIEW_MODE = "list";
+try { VIEW_MODE = localStorage.getItem("dashViewMode") === "grid" ? "grid" : "list"; } catch {}
+
+function refreshViewToggleLabel() {
+  const btn = document.getElementById("toggle-view");
+  if (btn) btn.textContent = VIEW_MODE === "grid" ? "☰ Vue liste" : "▦ Vue grille";
+}
+refreshViewToggleLabel();
+
+document.getElementById("toggle-view").addEventListener("click", () => {
+  VIEW_MODE = VIEW_MODE === "grid" ? "list" : "grid";
+  try { localStorage.setItem("dashViewMode", VIEW_MODE); } catch {}
+  refreshViewToggleLabel();
+  render({ submissions: LAST_SUBMISSIONS });
+});
+
+function buildGridTile(s) {
+  const roleForGender = ROLES.find(r => r.name === s.role);
+  const gender = roleForGender ? roleForGender.gender : "";
+  const statusVal = normalizeStatus(s.status);
+  const tile = document.createElement("div");
+  tile.className = "grid-tile" + (statusVal === "confirme" ? " is-confirme" : "");
+  tile.title = "Ouvrir la fiche de " + s.name;
+  tile.innerHTML =
+    '<div class="gt-nophoto" data-gt-photo="' + s.id + '">Photo...</div>' +
+    '<div class="gt-name">' + escapeHtml(s.name) + '</div>' +
+    '<div class="gt-agency">' + escapeHtml(s.agency || "—") + '</div>' +
+    '<div class="gt-badges">' +
+      '<span class="cmp-status ' + statusVal + '">' + statusLabel(statusVal, gender) + '</span>' +
+      (s.vimeo ? '<span class="cmp-status confirme" title="Essai disponible">🎬</span>' : "") +
+    '</div>';
+  fetchPhotoCached(s.id).then(photo => {
+    const ph = tile.querySelector('[data-gt-photo]');
+    if (!ph) return;
+    if (photo) ph.outerHTML = '<img src="' + photo + '" alt="' + escapeHtml(s.name) + '" loading="lazy">';
+    else ph.textContent = "Pas de photo";
+  });
+  tile.addEventListener("click", () => {
+    const modal = openModal(s.name, s.role, { wide: true });
+    modal.body.appendChild(buildCard(s));
+  });
+  return tile;
+}
+
 function renderPaginated(group, items, role) {
+  const isGrid = VIEW_MODE === "grid";
   const listEl = document.createElement("div");
+  if (isGrid) listEl.className = "grid-list";
   group.appendChild(listEl);
   let shown = 0;
 
@@ -1586,7 +1991,7 @@ function renderPaginated(group, items, role) {
 
   function renderNextBatch() {
     const batch = items.slice(shown, shown + PAGE_SIZE);
-    batch.forEach(s => listEl.appendChild(buildCard(s)));
+    batch.forEach(s => listEl.appendChild(isGrid ? buildGridTile(s) : buildCard(s)));
     shown += batch.length;
     if (shown < items.length) {
       moreBtn.textContent = "Charger plus (" + (items.length - shown) + " restants)";
@@ -1643,7 +2048,8 @@ function render(data) {
     header.innerHTML =
       '<button class="role-collapse-btn" title="Replier/déplier ce rôle">' + (COLLAPSED_ROLES.has(role) ? "▸" : "▾") + '</button>' +
       "<h2>" + role + " (" + items.length + ")</h2>" +
-      '<button class="role-pdf-btn" title="Exporter les Oui de ce rôle en PDF">⬇ PDF</button>' +
+      (items.length >= 2 ? '<button class="compare-btn" title="Comparer des candidats de ce rôle côte à côte">⚖ Comparer</button>' : "") +
+      '<button class="role-pdf-btn" title="Exporter ce rôle en PDF">⬇ PDF</button>' +
       buildRoleStatusSelect(processStatus, roleObj.gender);
     header.querySelector(".role-collapse-btn").addEventListener("click", () => {
       const nowCollapsed = group.classList.toggle("collapsed");
@@ -1653,6 +2059,10 @@ function render(data) {
     header.querySelector(".role-pdf-btn").addEventListener("click", () => {
       exportRolePdf(role);
     });
+    const compareBtn = header.querySelector(".compare-btn");
+    if (compareBtn) {
+      compareBtn.addEventListener("click", () => openCompareModal(role, items));
+    }
     header.querySelector(".role-status-select").addEventListener("change", async (e) => {
       const val = e.target.value;
       e.target.className = "role-status-select " + val;
@@ -1691,12 +2101,17 @@ function render(data) {
     header.innerHTML =
       '<button class="role-collapse-btn" title="Replier/déplier ce rôle">' + (COLLAPSED_ROLES.has(role) ? "▸" : "▾") + '</button>' +
       "<h2>" + role + " <span style=\"color:var(--gray); font-weight:400; font-size:11px; text-transform:none;\">— hors casting (" + items.length + ")</span></h2>" +
+      (items.length >= 2 ? '<button class="compare-btn" title="Comparer des candidats de ce rôle côte à côte">⚖ Comparer</button>' : "") +
       '<button class="role-toggle-btn promote-role-btn">Gérer ce rôle</button>';
     header.querySelector(".role-collapse-btn").addEventListener("click", () => {
       const nowCollapsed = group.classList.toggle("collapsed");
       header.querySelector(".role-collapse-btn").textContent = nowCollapsed ? "▸" : "▾";
       if (nowCollapsed) COLLAPSED_ROLES.add(role); else COLLAPSED_ROLES.delete(role);
     });
+    const customCompareBtn = header.querySelector(".compare-btn");
+    if (customCompareBtn) {
+      customCompareBtn.addEventListener("click", () => openCompareModal(role, items));
+    }
     header.querySelector(".promote-role-btn").addEventListener("click", async () => {
       const btn = header.querySelector(".promote-role-btn");
       btn.disabled = true;
