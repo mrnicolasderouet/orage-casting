@@ -481,6 +481,11 @@ async function confirmImport() {
   let done = 0, failed = 0;
   for (const c of toImport) {
     msgEl.textContent = "Import " + (done + failed + 1) + " / " + toImport.length + " (" + c.name + ")...";
+    // Match against an existing role name case/space-insensitively, to avoid
+    // creating an accidental duplicate role when the AI's spelling differs slightly.
+    const normalize = (s) => (s || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const existingMatch = ROLES.find(r => normalize(r.name) === normalize(c.role));
+    const roleToUse = existingMatch ? existingMatch.name : c.role;
     let photo = "";
     if (c.cv && /^https?:\/\//i.test(c.cv.trim())) {
       try {
@@ -502,7 +507,7 @@ async function confirmImport() {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
         body: JSON.stringify({
-          name: c.name, role: c.role, agency: c.agency, email: c.email,
+          name: c.name, role: roleToUse, agency: c.agency, email: c.email,
           email2: c.email2, cv: c.cv, showreel: c.showreel, availability: c.availability, note: c.note,
           photo: photo || undefined
         })
