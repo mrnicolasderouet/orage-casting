@@ -1,5 +1,5 @@
 // Gestion des créneaux d'essais — réservé au tableau de bord.
-const { listSlots, createSlots, patchSlot, deleteSlot, getSlot, releaseSlot, MAX_CAPACITY } = require("./_slots");
+const { listSlots, createSlots, patchSlot, deleteSlot, getSlot, releaseSlot, tryBookSlot, MAX_CAPACITY } = require("./_slots");
 const { updateSubmission } = require("./_redis");
 
 module.exports = async (req, res) => {
@@ -106,6 +106,28 @@ module.exports = async (req, res) => {
         return;
       }
       await patchSlot(slotId, { capacity: cap });
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (action === "assign") {
+      const { submissionId } = req.body || {};
+      if (!submissionId) {
+        res.status(400).json({ error: "submissionId requis" });
+        return;
+      }
+      const { getSubmission } = require("./_redis");
+      const sub = await getSubmission(submissionId);
+      if (!sub) {
+        res.status(404).json({ error: "Candidature introuvable" });
+        return;
+      }
+      const result = await tryBookSlot(slotId, submissionId);
+      if (!result.ok) {
+        res.status(409).json({ error: result.error });
+        return;
+      }
+      await updateSubmission(submissionId, { essaiMode: "presentiel", essaiDate: result.slot.start });
       res.status(200).json({ ok: true });
       return;
     }
