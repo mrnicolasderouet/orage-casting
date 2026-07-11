@@ -1005,7 +1005,13 @@ function renderRolesList() {
     listEl.innerHTML = '<div class="empty">Aucun rôle créé pour le moment.</div>';
     return;
   }
+  const nameCounts = {};
+  ROLES.forEach(r => {
+    const k = (r.name || "").trim().toUpperCase();
+    nameCounts[k] = (nameCounts[k] || 0) + 1;
+  });
   ROLES.forEach((role, i) => {
+    const isDup = nameCounts[(role.name || "").trim().toUpperCase()] > 1;
     const item = document.createElement("div");
     item.className = "role-manage-item";
     item.innerHTML =
@@ -1014,7 +1020,9 @@ function renderRolesList() {
           '<button class="rm-order-up"' + (i === 0 ? " disabled" : "") + '>▲</button>' +
           '<button class="rm-order-down"' + (i === ROLES.length - 1 ? " disabled" : "") + '>▼</button>' +
         '</div>' +
-        '<span class="rm-name">' + escapeHtml(role.name) + '</span>' +
+        '<span class="rm-name">' + escapeHtml(role.name) +
+          (isDup ? ' <span style="background:var(--non);color:#fff;font-size:9px;padding:2px 7px;border-radius:8px;letter-spacing:0.5px;vertical-align:middle;">DOUBLON</span>' : '') +
+        '</span>' +
         buildRoleStatusSelect(role.processStatus, role.gender) +
         '<button class="rm-edit-toggle">Modifier</button>' +
         '<button class="rm-delete">Supprimer</button>' +
@@ -1080,11 +1088,19 @@ function renderRolesList() {
     });
     item.querySelector(".rm-delete").addEventListener("click", async () => {
       if (!confirm('Supprimer le rôle "' + role.name + '" ? Les candidatures déjà reçues pour ce rôle resteront dans le tableau de bord, classées "hors casting".')) return;
-      await fetch("/api/roles-delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
-        body: JSON.stringify({ id: role.id })
-      });
+      try {
+        const res = await fetch("/api/roles-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+          body: JSON.stringify({ id: role.id })
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          alert("Suppression refusée par le serveur : " + (body.error || res.status));
+        }
+      } catch {
+        alert("Erreur de connexion pendant la suppression.");
+      }
       await refreshRoles();
       renderRolesList();
       loadData();
