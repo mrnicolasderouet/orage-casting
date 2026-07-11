@@ -6,29 +6,32 @@
 <title>ORAGE — Tableau de bord casting</title>
 <style>
   :root {
-    --dark: #0d1b2a; --dark2: var(--field); --green: #1a6b3c; --green-light: #2f9a5b;
-    --gray: #8a94a3; --line: rgba(255,255,255,0.12); --card: #12233a;
-    --oui: #2f9a5b; --peutetre: #b39a3a; --non: #b3564a; --archive-c: #6b6f76; --confirme: #8b5cf6; --refuse: #d4622a;
-    --page-bg: linear-gradient(160deg, var(--dark), var(--dark2));
-    --panel: var(--panel);
-    --field: var(--field);
-    --fg: #f4f6f8;
-    --fg-soft: var(--fg-soft);
+    --dark: #232a36; --dark2: #1a212b; --green: #1d7a48; --green-light: #3aa871;
+    --gray: #98a4b3; --line: rgba(160, 178, 205, 0.18); --card: #2c3442;
+    --oui: #4fb87e; --peutetre: #d4b356; --non: #d16a5b; --archive-c: #7c8695; --confirme: #9d8cf0; --refuse: #d4622a;
+    --page-bg: linear-gradient(160deg, #242b38, #1a202a);
+    --panel: #353e4d;
+    --field: #232a36;
+    --fg: #eef2f6;
+    --fg-soft: #cdd6e2;
   }
   body.light {
-    --page-bg: #eef1f5;
-    --card: #ffffff;
-    --panel: #f3f5f8;
+    --page-bg: #f3efe7;
+    --card: #fffdf9;
+    --panel: #efe9dd;
     --field: #ffffff;
-    --line: rgba(20, 35, 55, 0.16);
-    --gray: #62707f;
-    --fg: #1b2530;
-    --fg-soft: #38434f;
-    --green-light: #1f8a4d;
-    --oui: #1e8a52;
-    --peutetre: #96781c;
-    --non: #c0483a;
-    --confirme: #7a50c7;
+    --line: rgba(95, 85, 60, 0.28);
+    --gray: #8a8272;
+    --fg: #2b2b26;
+    --fg-soft: #4a473d;
+    --green: #5c7a3a;
+    --green-light: #4e7a3a;
+    --oui: #4e7a3a;
+    --peutetre: #a3781f;
+    --non: #c05f3c;
+    --confirme: #8a5fb0;
+    --archive-c: #9a9284;
+    --refuse: #b5552e;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--page-bg); color: var(--fg); min-height: 100vh; }
@@ -43,10 +46,10 @@
   #gate .err { color: #e07a6b; font-size: 13px; margin-top: 10px; min-height: 18px; }
 
   #dashboard { display: none; }
-  .stats { display: flex; gap: 14px; margin-bottom: 28px; flex-wrap: wrap; }
-  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; min-width: 110px; }
-  .stat .num { font-size: 24px; font-weight: 800; }
-  .stat .label { color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; margin-bottom: 26px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .stat { display: inline-flex; align-items: baseline; gap: 6px; background: none; border: none; padding: 0; }
+  .stat .num { font-size: 15px; font-weight: 800; }
+  .stat .label { font-size: 11px; color: var(--gray); }
 
   .role-group { margin-bottom: 30px; }
   .role-group h2 { font-size: 16px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 12px; }
@@ -164,7 +167,11 @@
   .scene-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--line); }
   .scene-row label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
   .empty { color: var(--gray); font-size: 13px; padding: 20px 0; }
-  .refresh { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 20px; }
+  .refresh { background: var(--card); border: 1px solid var(--line); color: var(--gray); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .toolbar { display: flex; gap: 10px 26px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 26px; }
+  .tb-group { display: flex; flex-direction: column; gap: 6px; }
+  .tb-label { font-size: 9.5px; color: var(--gray); text-transform: uppercase; letter-spacing: 1.2px; padding-left: 2px; opacity: 0.8; }
+  .tb-btns { display: flex; gap: 6px; flex-wrap: wrap; }
   .refresh:hover { color: var(--fg); }
   .load-more-btn { display: block; width: 100%; background: var(--card); border: 1px dashed var(--line); color: var(--gray); padding: 12px; border-radius: 8px; font-size: 13px; cursor: pointer; margin-top: 6px; }
   .load-more-btn:hover { color: var(--fg); border-color: var(--green-light); }
@@ -380,6 +387,8 @@
   .convocation-btn { background: var(--green); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .convocation-btn:hover { opacity: 0.85; }
   .convocation-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
+  .merge-role-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .merge-role-btn:hover { background: var(--peutetre); color: #fff; }
   .slot-admin-day { margin-bottom: 20px; }
   .slot-admin-day h4 { font-size: 13px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 0 0 8px; }
   .slot-admin-item { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
@@ -399,12 +408,12 @@
     .wrap { padding: 20px 12px 60px; }
     h1 { font-size: 22px; }
     .sub { margin-bottom: 20px; }
-    .stats { gap: 8px; }
-    .stat { padding: 10px 14px; min-width: calc(50% - 4px); flex: 1; }
-    .stat .num { font-size: 20px; }
+    .stats { gap: 4px 16px; }
 
     /* Boutons et champs : cibles tactiles confortables, 16px pour éviter le zoom iOS */
     .refresh { padding: 10px 12px; font-size: 13px; }
+    .toolbar { gap: 14px; }
+    .tb-group { width: 100%; }
     input, select, textarea, button { font-size: 16px !important; }
     .sub-card select, .sub-card button { min-height: 42px; }
     .role-status-select, .role-pdf-btn, .compare-btn, .role-toggle-btn, .role-collapse-btn { min-height: 40px; }
@@ -471,19 +480,44 @@
     <div id="dashboard">
       <h1>ORAGE — Tableau de bord</h1>
       <div class="sub">Candidatures reçues des agences</div>
-      <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
-        <button class="refresh" id="refresh">↻ Actualiser</button>
-        <button class="refresh" id="toggle-view" style="border-color:var(--green-light);color:var(--green-light);">▦ Vue grille</button>
-        <button class="refresh" id="toggle-theme" title="Basculer entre mode sombre et mode clair">☀️ Mode clair</button>
-        <button class="refresh" id="open-planning" style="border-color:var(--peutetre);color:var(--peutetre);">📅 Planning essais</button>
-        <button class="refresh" id="export-oui" style="border-color:var(--oui);color:var(--oui);">⬇ Exporter les « Oui » (PDF)</button>
-        <button class="refresh" id="export-peutetre" style="border-color:var(--peutetre);color:var(--peutetre);">⬇ Exporter les « Peut-être » (PDF)</button>
-        <button class="refresh" id="open-client" style="border-color:var(--green-light);color:var(--green-light);">↗ Ouvrir la page client</button>
-        <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
-        <button class="refresh" id="toggle-roles-panel" style="border-color:var(--confirme);color:var(--confirme);">🎭 Gérer les rôles</button>
-        <button class="refresh" id="toggle-order-panel" style="border-color:var(--confirme);color:var(--confirme);">🔝 Ordre d'affichage</button>
-        <button class="refresh" id="toggle-import-panel" style="border-color:var(--oui);color:var(--oui);">📥 Importer une liste</button>
-        <button class="refresh" id="toggle-slots-panel" style="border-color:var(--peutetre);color:var(--peutetre);">🗓 Créneaux d'essais</button>
+      <div class="toolbar">
+        <div class="tb-group">
+          <span class="tb-label">Affichage</span>
+          <div class="tb-btns">
+            <button class="refresh" id="refresh">↻ Actualiser</button>
+            <button class="refresh" id="toggle-view" style="border-color:var(--green-light);color:var(--green-light);">▦ Vue grille</button>
+            <button class="refresh" id="toggle-theme" title="Basculer entre mode sombre et mode clair">☀️ Mode clair</button>
+          </div>
+        </div>
+        <div class="tb-group">
+          <span class="tb-label">Candidats</span>
+          <div class="tb-btns">
+            <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
+            <button class="refresh" id="toggle-import-panel" style="border-color:var(--oui);color:var(--oui);">📥 Importer une liste</button>
+          </div>
+        </div>
+        <div class="tb-group">
+          <span class="tb-label">Essais</span>
+          <div class="tb-btns">
+            <button class="refresh" id="open-planning" style="border-color:var(--peutetre);color:var(--peutetre);">📅 Planning</button>
+            <button class="refresh" id="toggle-slots-panel" style="border-color:var(--peutetre);color:var(--peutetre);">🗓 Créneaux</button>
+          </div>
+        </div>
+        <div class="tb-group">
+          <span class="tb-label">Casting</span>
+          <div class="tb-btns">
+            <button class="refresh" id="toggle-roles-panel" style="border-color:var(--confirme);color:var(--confirme);">🎭 Gérer les rôles</button>
+            <button class="refresh" id="toggle-order-panel" style="border-color:var(--confirme);color:var(--confirme);">🔝 Ordre d'affichage</button>
+          </div>
+        </div>
+        <div class="tb-group">
+          <span class="tb-label">Partage</span>
+          <div class="tb-btns">
+            <button class="refresh" id="export-oui" style="border-color:var(--oui);color:var(--oui);">⬇ PDF « Oui »</button>
+            <button class="refresh" id="export-peutetre" style="border-color:var(--peutetre);color:var(--peutetre);">⬇ PDF « Peut-être »</button>
+            <button class="refresh" id="open-client" style="border-color:var(--green-light);color:var(--green-light);">↗ Page client</button>
+          </div>
+        </div>
       </div>
 
       <div id="slots-panel" class="add-profile-panel" style="display:none;">
@@ -1915,6 +1949,52 @@ function renderSlotsList() {
   });
 }
 
+function openMergeModal(fromRole, items) {
+  const modal = openModal("↪ Fusionner « " + fromRole + " »", items.length + " candidature(s) seront réaffectées au rôle que tu choisis. Le groupe hors casting disparaîtra ensuite.");
+  if (ROLES.length === 0) {
+    modal.body.innerHTML = '<div class="empty">Aucun rôle géré disponible.</div>';
+    return;
+  }
+  const select = document.createElement("select");
+  select.style.cssText = "width:100%; background:var(--field); border:1px solid var(--line); border-radius:6px; color:var(--fg); padding:10px; font-size:14px; margin-bottom:14px;";
+  select.innerHTML = '<option value="">— Choisir le rôle de destination —</option>' +
+    [...ROLES].sort((a, b) => a.name.localeCompare(b.name, "fr")).map(r =>
+      '<option value="' + escapeHtml(r.name) + '">' + escapeHtml(r.name) + '</option>'
+    ).join("");
+  const btn = document.createElement("button");
+  btn.className = "compare-launch-btn";
+  btn.textContent = "Fusionner les " + items.length + " candidature(s)";
+  btn.disabled = true;
+  const msg = document.createElement("span");
+  msg.style.cssText = "font-size:12px; color:var(--gray); margin-left:10px;";
+  select.addEventListener("change", () => { btn.disabled = !select.value; });
+  btn.addEventListener("click", async () => {
+    const target = select.value;
+    if (!target) return;
+    if (!confirm("Réaffecter les " + items.length + " candidature(s) de « " + fromRole + " » vers « " + target + " » ?")) return;
+    btn.disabled = true;
+    select.disabled = true;
+    let done = 0, failed = 0;
+    for (const s of items) {
+      const ok = await updateField(s.id, "role", target);
+      if (ok) done++; else failed++;
+      msg.textContent = done + "/" + items.length + (failed > 0 ? " (" + failed + " échec(s))" : "");
+    }
+    if (failed === 0) {
+      msg.textContent = "Fusion terminée ✓";
+      setTimeout(() => { modal.close(); loadData(); }, 800);
+    } else {
+      msg.style.color = "var(--non)";
+      msg.textContent = done + " réaffectée(s), " + failed + " échec(s) — réessaie pour le reste.";
+      btn.disabled = false;
+      select.disabled = false;
+    }
+  });
+  modal.body.appendChild(select);
+  modal.body.appendChild(btn);
+  modal.body.appendChild(msg);
+}
+
 function openAssignModal(slot) {
   const when = new Date(slot.start).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) +
     " à " + new Date(slot.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -2845,9 +2925,17 @@ document.getElementById("toggle-theme").addEventListener("click", () => {
   applyTheme();
 });
 
+let SAVED_COLLAPSED = null;
 document.getElementById("toggle-view").addEventListener("click", () => {
   VIEW_MODE = VIEW_MODE === "grid" ? "list" : "grid";
   try { localStorage.setItem("dashViewMode", VIEW_MODE); } catch {}
+  if (VIEW_MODE === "grid") {
+    SAVED_COLLAPSED = new Set(COLLAPSED_ROLES);
+    COLLAPSED_ROLES.clear();
+  } else if (SAVED_COLLAPSED) {
+    COLLAPSED_ROLES = SAVED_COLLAPSED;
+    SAVED_COLLAPSED = null;
+  }
   refreshViewToggleLabel();
   render({ submissions: LAST_SUBMISSIONS });
 });
@@ -2928,13 +3016,13 @@ function render(data) {
   const waitingTapes = active.filter(s => { const st = essaiStateFor(s); return st && st.waiting; }).length;
   const upcomingEssais = active.filter(s => s.essaiMode === "presentiel" && s.essaiDate && new Date(s.essaiDate).getTime() >= Date.now()).length;
   statsEl.innerHTML =
-    '<div class="stat"><div class="num">' + active.length + '</div><div class="label">Total actifs</div></div>' +
-    '<div class="stat"><div class="num">' + counts.confirme + '</div><div class="label">Confirmé</div></div>' +
-    '<div class="stat"><div class="num">' + counts.oui + '</div><div class="label">Oui</div></div>' +
-    '<div class="stat"><div class="num">' + counts.peutetre + '</div><div class="label">Peut-être</div></div>' +
-    '<div class="stat"><div class="num">' + counts.non + '</div><div class="label">Non</div></div>' +
-    (waitingTapes > 0 ? '<div class="stat"><div class="num" style="color:var(--peutetre);">' + waitingTapes + '</div><div class="label">⏳ Self-tapes attendues</div></div>' : "") +
-    (upcomingEssais > 0 ? '<div class="stat"><div class="num" style="color:var(--confirme);">' + upcomingEssais + '</div><div class="label">📅 Essais à venir</div></div>' : "");
+    '<div class="stat"><div class="num">' + active.length + '</div><div class="label">actifs</div></div>' +
+    '<div class="stat"><div class="num" style="color:var(--confirme);">' + counts.confirme + '</div><div class="label">confirmés</div></div>' +
+    '<div class="stat"><div class="num" style="color:var(--oui);">' + counts.oui + '</div><div class="label">oui</div></div>' +
+    '<div class="stat"><div class="num" style="color:var(--peutetre);">' + counts.peutetre + '</div><div class="label">peut-être</div></div>' +
+    '<div class="stat"><div class="num" style="color:var(--non);">' + counts.non + '</div><div class="label">non</div></div>' +
+    (waitingTapes > 0 ? '<div class="stat"><div class="num" style="color:var(--peutetre);">' + waitingTapes + '</div><div class="label">⏳ self-tapes attendues</div></div>' : "") +
+    (upcomingEssais > 0 ? '<div class="stat"><div class="num" style="color:var(--confirme);">' + upcomingEssais + '</div><div class="label">📅 essais à venir</div></div>' : "");
 
   const groupsEl = document.getElementById("groups");
   groupsEl.innerHTML = "";
@@ -3010,12 +3098,17 @@ function render(data) {
       '<button class="role-collapse-btn" title="Replier/déplier ce rôle">' + (COLLAPSED_ROLES.has(role) ? "▸" : "▾") + '</button>' +
       "<h2>" + role + " <span style=\"color:var(--gray); font-weight:400; font-size:11px; text-transform:none;\">— hors casting (" + items.length + ")</span></h2>" +
       (items.length >= 2 ? '<button class="compare-btn" title="Comparer des candidats de ce rôle côte à côte">⚖ Comparer</button>' : "") +
+      '<button class="merge-role-btn" title="Réaffecter toutes ces candidatures à un rôle existant (fusion de doublon)">↪ Fusionner vers...</button>' +
       '<button class="role-toggle-btn promote-role-btn">Gérer ce rôle</button>';
     header.querySelector(".role-collapse-btn").addEventListener("click", () => {
       const nowCollapsed = group.classList.toggle("collapsed");
       header.querySelector(".role-collapse-btn").textContent = nowCollapsed ? "▸" : "▾";
       if (nowCollapsed) COLLAPSED_ROLES.add(role); else COLLAPSED_ROLES.delete(role);
     });
+    const mergeBtn = header.querySelector(".merge-role-btn");
+    if (mergeBtn) {
+      mergeBtn.addEventListener("click", () => openMergeModal(role, items));
+    }
     const customCompareBtn = header.querySelector(".compare-btn");
     if (customCompareBtn) {
       customCompareBtn.addEventListener("click", () => openCompareModal(role, items));
