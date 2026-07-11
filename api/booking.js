@@ -31,8 +31,22 @@ module.exports = async (req, res) => {
       const slots = await listSlots();
       const now = Date.now();
       const mySlot = slots.find(s => (s.bookedIds || []).includes(id)) || null;
-      const available = slots.filter(s => !s.blocked && (s.bookedIds || []).length < (s.capacity || 1) && new Date(s.start).getTime() > now)
-        .map(s => ({ id: s.id, start: s.start, durationMin: s.durationMin, location: s.location, capacity: s.capacity || 1, taken: (s.bookedIds || []).length }));
+      const availableRaw = slots.filter(s => !s.blocked && (s.bookedIds || []).length < (s.capacity || 1) && new Date(s.start).getTime() > now);
+      // Pour les duos entamés : on indique le RÔLE (jamais le nom) du comédien déjà réservé,
+      // afin que l'agence sache avec quel rôle le sien lira la scène.
+      const partnerIds = [...new Set(availableRaw.flatMap(s => s.bookedIds || []))];
+      const partnerRoles = {};
+      await Promise.all(partnerIds.map(async pid => {
+        try {
+          const p = await getSubmission(pid);
+          if (p) partnerRoles[pid] = p.role || "";
+        } catch {}
+      }));
+      const available = availableRaw.map(s => ({
+        id: s.id, start: s.start, durationMin: s.durationMin, location: s.location,
+        capacity: s.capacity || 1, taken: (s.bookedIds || []).length,
+        withRoles: (s.bookedIds || []).map(pid => partnerRoles[pid]).filter(Boolean)
+      }));
       res.status(200).json({
         project: PROJECT_NAME,
         candidate: { name: sub.name, role: sub.role },

@@ -78,6 +78,37 @@ module.exports = async (req, res) => {
       return;
     }
 
+    if (action === "unassign") {
+      const { submissionId } = req.body || {};
+      if (!slotId || !submissionId) {
+        res.status(400).json({ error: "slotId et submissionId requis" });
+        return;
+      }
+      await releaseSlot(slotId, submissionId);
+      await updateSubmission(submissionId, { essaiDate: "" }).catch(() => {});
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (action === "move") {
+      const { fromSlotId, toSlotId, submissionId } = req.body || {};
+      if (!toSlotId || !submissionId) {
+        res.status(400).json({ error: "toSlotId et submissionId requis" });
+        return;
+      }
+      const result = await tryBookSlot(toSlotId, submissionId);
+      if (!result.ok) {
+        res.status(409).json({ error: result.error });
+        return;
+      }
+      if (fromSlotId) {
+        await releaseSlot(fromSlotId, submissionId);
+      }
+      await updateSubmission(submissionId, { essaiMode: "presentiel", essaiDate: result.slot.start });
+      res.status(200).json({ ok: true });
+      return;
+    }
+
     if (!slotId) {
       res.status(400).json({ error: "slotId requis" });
       return;
