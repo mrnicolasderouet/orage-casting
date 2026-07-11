@@ -355,6 +355,11 @@
   .booking-invite-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .booking-invite-btn:hover { background: var(--peutetre); color: #fff; }
   .booking-invite-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
+  .cb-callback { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--non); font-weight: 700; white-space: nowrap; cursor: pointer; }
+  .cb-callback input { accent-color: var(--non); cursor: pointer; }
+  .convocation-btn { background: var(--green); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .convocation-btn:hover { opacity: 0.85; }
+  .convocation-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
   .slot-admin-day { margin-bottom: 20px; }
   .slot-admin-day h4 { font-size: 13px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 0 0 8px; }
   .slot-admin-item { display: flex; align-items: center; gap: 12px; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
@@ -1710,15 +1715,16 @@ function toLocalDatetimeValue(iso) {
 function essaiStateFor(s) {
   const mode = s.essaiMode || ((s.sceneSentAt || s.vimeo) ? "selftape" : "");
   if (mode === "presentiel") {
+    const cb = !!s.callback;
     if (s.essaiDate) {
       const d = new Date(s.essaiDate);
       const dateStr = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
       if (d.getTime() < Date.now()) {
-        return { cls: "tape-ok", icon: "🎥", label: "🎥 Essai passé le " + dateStr, waiting: false };
+        return { cls: "tape-ok", icon: "🎥", label: "🎥 " + (cb ? "Call back" : "Essai") + " passé le " + dateStr, waiting: false };
       }
-      return { cls: "tape-wait", icon: "📅", label: "📅 Convoqué le " + dateStr + " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), waiting: false };
+      return { cls: cb ? "tape-late" : "tape-wait", icon: cb ? "🔁" : "📅", label: (cb ? "🔁 Call back le " : "📅 Convoqué le ") + dateStr + " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), waiting: false };
     }
-    return { cls: "tape-late", icon: "📅", label: "📅 Présentiel — à convoquer", waiting: false };
+    return { cls: "tape-late", icon: cb ? "🔁" : "📅", label: (cb ? "🔁 Call back" : "📅 Présentiel") + " — à convoquer", waiting: false };
   }
   if (mode === "selftape") {
     if (s.vimeo) return { cls: "tape-ok", icon: "🎬", label: "🎬 Self-tape reçue", waiting: false };
@@ -2147,7 +2153,7 @@ function buildPlanningItem(s, modal) {
   }
   row.innerHTML =
     '<span class="p-time">' + time + '</span>' +
-    '<span class="p-name">' + escapeHtml(s.name) + (slot && (slot.capacity || 1) > 1 ? ' <span style="color:var(--confirme);font-size:10px;">👥 duo</span>' : '') + '</span>' +
+    '<span class="p-name">' + escapeHtml(s.name) + (s.callback ? ' <span style="color:var(--non);font-size:10px;font-weight:800;letter-spacing:0.5px;">🔁 CALL BACK</span>' : '') + (slot && (slot.capacity || 1) > 1 ? ' <span style="color:var(--confirme);font-size:10px;">👥 duo</span>' : '') + '</span>' +
     '<span class="p-role">' + escapeHtml(s.role) + '</span>' +
     '<span class="p-agency">' + escapeHtml(s.agency || "") + '</span>' +
     '<span class="p-actions">' + actions.join("") + '</span>';
@@ -2405,6 +2411,11 @@ function buildCard(s, opts) {
           '<button class="essai-save">Enregistrer</button>' +
           '<span class="essai-msg"></span>' +
           (s.essaiMode === "presentiel" ?
+            '<label class="cb-callback"><input type="checkbox" class="essai-callback"' + (s.callback ? " checked" : "") + '> 🔁 Call back</label>' +
+            '<button class="convocation-btn" title="Envoyer par email la convocation complète : date, heure, adresse + scène et consignes en pièce jointe">📤 Envoyer la convocation</button>' +
+            '<span class="convocation-info">' + (s.convocationSentAt ? "Convocation envoyée le " + new Date(s.convocationSentAt).toLocaleDateString("fr-FR") : "") + '</span>'
+          : "") +
+          (s.essaiMode === "presentiel" ?
             '<button class="booking-link-btn" title="Copier le lien personnel de réservation de créneau">🔗 Lien réservation</button>' +
             '<button class="booking-invite-btn" title="Envoyer à l\'agence l\'email avec le lien de réservation">📩 Inviter à réserver</button>' +
             '<span class="booking-invite-info">' + (s.bookingInviteSentAt ? "Invitation envoyée le " + new Date(s.bookingInviteSentAt).toLocaleDateString("fr-FR") : "") + '</span>'
@@ -2616,6 +2627,45 @@ function buildCard(s, opts) {
             setTimeout(() => { bookingLinkBtn.textContent = original; }, 1800);
           } catch {
             prompt("Copie ce lien manuellement :", url);
+          }
+        });
+      }
+      const callbackCb = card.querySelector(".essai-callback");
+      if (callbackCb) {
+        callbackCb.addEventListener("change", async () => {
+          await updateField(s.id, "callback", callbackCb.checked);
+          setTimeout(loadData, 600);
+        });
+      }
+      const convocationBtn = card.querySelector(".convocation-btn");
+      if (convocationBtn) {
+        const convInfo = card.querySelector(".convocation-info");
+        convocationBtn.addEventListener("click", async () => {
+          if (!s.essaiDate) {
+            alert("Fixe d'abord la date et l'heure de l'essai (champ date ci-contre, ou assignation à un créneau).");
+            return;
+          }
+          const when = new Date(s.essaiDate).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + " à " + new Date(s.essaiDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+          if (!confirm("Envoyer la convocation " + (s.callback ? "CALL BACK " : "") + "à " + (s.email || "(aucun email)") + " pour " + s.name + " ?\n\n" + when + "\nLa scène et les consignes du rôle seront jointes automatiquement.")) return;
+          convocationBtn.disabled = true;
+          convInfo.textContent = "Envoi...";
+          try {
+            const res = await fetch("/api/send-convocation", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+              body: JSON.stringify({ id: s.id })
+            });
+            const body = await res.json().catch(() => ({}));
+            if (res.ok) {
+              convInfo.textContent = "Convocation envoyée ✓" + (body.sceneAttached === false ? " (sans PDF : scène introuvable pour ce rôle)" : "");
+              setTimeout(loadData, 1500);
+            } else {
+              convInfo.textContent = "Erreur : " + (body.error || res.status);
+              convocationBtn.disabled = false;
+            }
+          } catch {
+            convInfo.textContent = "Erreur de connexion.";
+            convocationBtn.disabled = false;
           }
         });
       }
