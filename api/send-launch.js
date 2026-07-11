@@ -1,6 +1,6 @@
 // 📣 Lancement de casting : bel email visuel envoyé aux agences du répertoire,
 // avec les rôles recherchés et le lien vers la plateforme de soumission.
-const { kvGet, listRoles } = require("./_redis");
+const { kvGet, kvSet, listRoles } = require("./_redis");
 const { guardDashboard } = require("./_auth");
 
 const PROJECT_NAME = "ORAGE";
@@ -19,7 +19,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { agentIds, roleIds, message, includePassword } = req.body || {};
+    const { agentIds, roleIds, message, includePassword, mode } = req.body || {};
+    const isRelance = mode === "relance";
     const allAgents = (await kvGet(`${KV_PREFIX}:agents_directory`)) || [];
     const recipients = (Array.isArray(agentIds) && agentIds.length > 0)
       ? allAgents.filter(a => agentIds.includes(a.id))
@@ -60,11 +61,13 @@ module.exports = async (req, res) => {
         to: [CASTING_CONTACT],
         bcc: recipients.map(a => a.email),
         reply_to: CASTING_CONTACT,
-        subject: `📣 Lancement de casting — ${PROJECT_NAME} (${roles.length} rôle${roles.length > 1 ? "s" : ""})`,
+        subject: isRelance
+          ? `🔁 Relance — Casting ${PROJECT_NAME} toujours ouvert (${roles.length} rôle${roles.length > 1 ? "s" : ""})`
+          : `📣 Lancement de casting — ${PROJECT_NAME} (${roles.length} rôle${roles.length > 1 ? "s" : ""})`,
         html: `
           <div style="max-width:640px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#26302a;">
             <div style="background:linear-gradient(135deg,#143523,#1d7a48);border-radius:12px;padding:34px 30px;text-align:center;margin-bottom:26px;">
-              <div style="font-size:12px;letter-spacing:3px;color:#a8d8bd;text-transform:uppercase;margin-bottom:8px;">Lancement de casting</div>
+              <div style="font-size:12px;letter-spacing:3px;color:#a8d8bd;text-transform:uppercase;margin-bottom:8px;">${isRelance ? "Casting toujours ouvert" : "Lancement de casting"}</div>
               <div style="font-size:34px;font-weight:bold;color:#ffffff;letter-spacing:2px;">${PROJECT_NAME}</div>
               <div style="font-size:12px;color:#a8d8bd;margin-top:8px;">Nicolas Derouet Casting</div>
             </div>
@@ -88,6 +91,15 @@ module.exports = async (req, res) => {
       const errBody = await emailRes.text();
       res.status(502).json({ error: "Échec de l'envoi de l'email", detail: errBody });
       return;
+    }
+    // Mémoriser la date d'envoi sur chaque agent destinataire (pour le suivi des relances)
+    try {
+      const now = new Date().toISOString();
+      const sentIds = new Set(recipients.map(r => r.id));
+      const updated = allAgents.map(a => sentIds.has(a.id) ? { ...a, lastLaunchAt: now } : a);
+      await kvSet(`${KV_PREFIX}:agents_directory`, updated);
+    } catch (err) {
+      console.error("lastLaunchAt update failed", err);
     }
     res.status(200).json({ ok: true, sentTo: recipients.length, roles: roles.length });
   } catch (err) {
