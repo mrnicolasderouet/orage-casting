@@ -393,6 +393,8 @@
   .propose-btn:hover { background: var(--peutetre); color: #fff; }
   .propose-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
   .propose-row { border-top: 1px dashed var(--line); }
+  .panel-close { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 400; }
+  .panel-close:hover { color: var(--fg); border-color: var(--green-light); }
   .merge-role-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .merge-role-btn:hover { background: var(--peutetre); color: #fff; }
   .slot-admin-day { margin-bottom: 20px; }
@@ -529,7 +531,7 @@
       </div>
 
       <div id="slots-panel" class="add-profile-panel" style="display:none;">
-        <h3>🗓 Créneaux d'essais — réservation en ligne</h3>
+        <h3 style="display:flex; align-items:center;"><span style="flex:1;">🗓 Créneaux d'essais — réservation en ligne</span><button type="button" class="panel-close" data-panel="slots-panel">✕ Fermer</button></h3>
         <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">Crée des journées de casting : les agences réservent, déplacent ou annulent via le lien personnel de chaque candidat (bouton « 📩 Inviter à réserver » sur les fiches en présentiel). Chaque réservation met automatiquement à jour la convocation et le planning.</p>
         <form id="create-slots-form">
           <div>
@@ -575,7 +577,7 @@
       </div>
 
       <div id="contacts-panel" class="add-profile-panel" style="display:none;">
-        <h3>👥 Contacts du projet</h3>
+        <h3 style="display:flex; align-items:center;"><span style="flex:1;">👥 Contacts du projet</span><button type="button" class="panel-close" data-panel="contacts-panel">✕ Fermer</button></h3>
         <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">Réalisateur·trice, producteur·trice, assistant·e... Ces contacts servent de destinataires pour l'envoi du planning des essais.</p>
         <form id="add-contact-form">
           <div>
@@ -1868,6 +1870,13 @@ function essaiStateFor(s) {
 }
 
 document.getElementById("open-planning").addEventListener("click", openPlanningModal);
+
+document.querySelectorAll(".panel-close").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const panel = document.getElementById(btn.dataset.panel);
+    if (panel) panel.style.display = "none";
+  });
+});
 
 // ===== Contacts du projet =====
 let CONTACTS = [];
