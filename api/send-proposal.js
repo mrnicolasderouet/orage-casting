@@ -1,6 +1,7 @@
 // Étape 1 du présentiel : proposer un jour + créneau (matin/après-midi) AVANT la convocation.
 // Pas de scène jointe — on attend le retour de l'agent pour confirmer jour et heure.
 const { getSubmission, updateSubmission } = require("./_redis");
+const { guardDashboard } = require("./_auth");
 
 const PROJECT_NAME = "ORAGE";
 const CASTING_CONTACT = "casting@mrnicolasderouet.com";
@@ -11,15 +12,7 @@ module.exports = async (req, res) => {
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
-  const password = req.headers["x-dashboard-password"];
-  if (!process.env.DASHBOARD_PASSWORD) {
-    res.status(500).json({ error: "DASHBOARD_PASSWORD non configuré côté serveur" });
-    return;
-  }
-  if (password !== process.env.DASHBOARD_PASSWORD) {
-    res.status(401).json({ error: "Mot de passe incorrect" });
-    return;
-  }
+  if (!(await guardDashboard(req, res))) return;
   if (!process.env.RESEND_API_KEY) {
     res.status(500).json({ error: "RESEND_API_KEY non configuré côté serveur" });
     return;
@@ -55,6 +48,7 @@ module.exports = async (req, res) => {
         from: process.env.RESEND_FROM || `${PROJECT_NAME} Casting <onboarding@resend.dev>`,
         to: [sub.email],
         reply_to: CASTING_CONTACT,
+        bcc: [CASTING_CONTACT],
         subject: `${PROJECT_NAME} — ${isCallback ? "Call back" : "Essai"} : disponibilité de ${sub.name} (${sub.role}) — ${dayStr}`,
         html: `
           <p>Bonjour,</p>

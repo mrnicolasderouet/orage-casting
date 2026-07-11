@@ -1,4 +1,4 @@
-// Envoi de l'invitation à réserver un créneau d'essai — réservé au tableau de bord.
+// Email de non-retenue à l'agence — courtois, valorisant, porte ouverte.
 const { getSubmission, updateSubmission } = require("./_redis");
 const { guardDashboard } = require("./_auth");
 
@@ -32,8 +32,14 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const host = req.headers["x-forwarded-host"] || req.headers.host;
-    const bookingUrl = `https://${host}/booking.html?id=${encodeURIComponent(id)}`;
+    // Remerciement adapté : essai passé, self-tape reçue, ou simple candidature.
+    const hadEssai = sub.essaiMode === "presentiel" && sub.essaiDate && new Date(sub.essaiDate).getTime() < Date.now();
+    const hadTape = !!sub.vimeo && !hadEssai;
+    const merci = hadEssai
+      ? `, ainsi que pour l'essai passé — nous avons été ravis de rencontrer ${escapeHtml(sub.name)}`
+      : hadTape
+        ? `, ainsi que pour la self-tape envoyée, que nous avons regardée avec attention`
+        : "";
 
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -46,16 +52,13 @@ module.exports = async (req, res) => {
         to: [sub.email],
         reply_to: CASTING_CONTACT,
         bcc: [CASTING_CONTACT],
-        subject: `${PROJECT_NAME} — Réservez votre créneau d'essai : ${sub.name} (${sub.role})`,
+        subject: `${PROJECT_NAME} — Casting ${sub.role} : retour concernant ${sub.name}`,
         html: `
           <p>Bonjour,</p>
-          <p>Dans le cadre du casting de <strong>${PROJECT_NAME}</strong>, nous souhaitons ${sub.callback ? "revoir" : "rencontrer"} <strong>${escapeHtml(sub.name)}</strong> en ${sub.callback ? "call back" : "essai"} pour le rôle de <strong>${escapeHtml(sub.role)}</strong>.</p>
-          <p>Vous pouvez choisir directement le créneau qui vous convient via ce lien personnel :</p>
-          <p style="margin:18px 0;"><a href="${bookingUrl}" style="background:#1a6b3c;color:#ffffff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:bold;">Choisir un créneau d'essai</a></p>
-          <p style="font-size:12px;color:#666;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>${bookingUrl}</p>
-          <p>Ce lien vous permet également de déplacer ou d'annuler le rendez-vous en cas d'empêchement.</p>
-          <p>Pour toute question : <a href="mailto:${CASTING_CONTACT}">${CASTING_CONTACT}</a></p>
-          <p>Bien à vous,<br>Nicolas Derouet Casting</p>
+          <p>Nous vous remercions sincèrement d'avoir proposé <strong>${escapeHtml(sub.name)}</strong> pour le rôle de <strong>${escapeHtml(sub.role)}</strong> dans <strong>${PROJECT_NAME}</strong>${merci}.</p>
+          <p>Après réflexion, notre choix s'est finalement porté sur un autre profil pour ce rôle. Cette décision ne remet nullement en cause les qualités de ${escapeHtml(sub.name)} — les arbitrages d'un casting tiennent souvent à des équilibres de distribution bien plus qu'au talent de chacun.</p>
+          <p>Nous conservons précieusement sa candidature, <strong>en espérant à très bientôt sur un nouveau projet</strong>.</p>
+          <p>Bien à vous,<br>Nicolas Derouet Casting<br><a href="mailto:${CASTING_CONTACT}">${CASTING_CONTACT}</a></p>
         `
       })
     });
@@ -66,11 +69,7 @@ module.exports = async (req, res) => {
       return;
     }
 
-    await updateSubmission(id, {
-      essaiMode: "presentiel",
-      bookingInviteSentAt: new Date().toISOString()
-    });
-
+    await updateSubmission(id, { declineSentAt: new Date().toISOString() });
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error(err);

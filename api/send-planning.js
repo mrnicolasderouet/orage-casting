@@ -1,5 +1,6 @@
 // Envoi du planning des essais par email aux contacts du projet (réalisateur, producteur...).
 const { listSubmissions, kvGet } = require("./_redis");
+const { guardDashboard } = require("./_auth");
 const { listSlots } = require("./_slots");
 
 const PROJECT_NAME = "ORAGE";
@@ -11,15 +12,7 @@ module.exports = async (req, res) => {
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
-  const password = req.headers["x-dashboard-password"];
-  if (!process.env.DASHBOARD_PASSWORD) {
-    res.status(500).json({ error: "DASHBOARD_PASSWORD non configuré côté serveur" });
-    return;
-  }
-  if (password !== process.env.DASHBOARD_PASSWORD) {
-    res.status(401).json({ error: "Mot de passe incorrect" });
-    return;
-  }
+  if (!(await guardDashboard(req, res))) return;
   if (!process.env.RESEND_API_KEY) {
     res.status(500).json({ error: "RESEND_API_KEY non configuré côté serveur" });
     return;
@@ -89,6 +82,7 @@ module.exports = async (req, res) => {
         from: process.env.RESEND_FROM || `${PROJECT_NAME} Casting <onboarding@resend.dev>`,
         to: recipients.map(r => r.email),
         reply_to: CASTING_CONTACT,
+        bcc: [CASTING_CONTACT],
         subject: `${PROJECT_NAME} — Planning des essais (${subs.length} candidat${subs.length > 1 ? "s" : ""})`,
         attachments: pdfBase64 ? [{ filename: `${PROJECT_NAME}_Planning_essais.pdf`, content: pdfBase64 }] : [],
         html: `

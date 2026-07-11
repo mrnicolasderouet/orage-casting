@@ -1,19 +1,12 @@
 // Espace « Contacts du projet » : réalisateur/trice, producteur, assistants...
 const { kvGet, kvSet } = require("./_redis");
+const { guardDashboard } = require("./_auth");
 
 const KV_PREFIX = "orage";
 const KEY = `${KV_PREFIX}:project_contacts`;
 
 module.exports = async (req, res) => {
-  const password = req.headers["x-dashboard-password"];
-  if (!process.env.DASHBOARD_PASSWORD) {
-    res.status(500).json({ error: "DASHBOARD_PASSWORD non configuré côté serveur" });
-    return;
-  }
-  if (password !== process.env.DASHBOARD_PASSWORD) {
-    res.status(401).json({ error: "Mot de passe incorrect" });
-    return;
-  }
+  if (!(await guardDashboard(req, res))) return;
 
   try {
     if (req.method === "GET") {

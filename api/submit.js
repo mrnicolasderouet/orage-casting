@@ -112,6 +112,7 @@ async function sendAcknowledgmentEmail(sub) {
       from: process.env.RESEND_FROM || `${PROJECT_NAME} Casting <onboarding@resend.dev>`,
       to: [sub.email],
       reply_to: CASTING_CONTACT,
+        bcc: [CASTING_CONTACT],
       subject: `${PROJECT_NAME} — Candidature bien reçue : ${sub.name} (${sub.role})`,
       html: `
         <p>Bonjour,</p>
