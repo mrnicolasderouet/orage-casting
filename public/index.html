@@ -177,23 +177,20 @@
       <img src="nicolas-logo.png" alt="Casting Nicolas Derouet" style="height:80px; opacity:0.9;">
       <img src="elephant-logo.png" alt="Elephant" style="height:22px; opacity:0.9;">
     </div>
-    <div class="subtitle">Série 6 × 52 minutes — France Télévisions</div>
+    <div class="subtitle">Film institutionnel — diffusion télé et réseaux sociaux</div>
+    <div class="subtitle">Tournage : semaine du 7 septembre 2026 (prévisionnel)</div>
 
-    <img src="header.jpg" alt="ORAGE — Guéthary, Pays Basque" style="width:100%;border-radius:12px;margin-bottom:40px;display:block;">
+    <img src="concept.jpg" alt="ORAGE — Le concept" style="width:100%;border-radius:12px;margin-bottom:40px;display:block;">
 
     <div class="meta">
-      <div><span>Production</span>Elephant (Elise Castel, Fanny Rondeau)</div>
-      <div><span>Réalisateur</span>Florian Thomas (« Il était deux fois »)</div>
-      <div><span>Direction de production</span>Sophie Schmidt</div>
-      <div><span>Format</span>6 épisodes × 52 minutes</div>
-      <div><span>Tournage</span>14 septembre – 4 décembre 2026, Pays Basque</div>
+      <div><span>Agence</span>Webedia Elephant</div>
+      <div><span>Réalisateur</span>Arnaud Le Goff</div>
+      <div><span>Format</span>5 épisodes × 3 minutes</div>
       <div><span>Casting</span>Nicolas Derouet Casting</div>
       <div><span>Contact</span>casting@mrnicolasderouet.com</div>
     </div>
 
-    <p class="synopsis">Dans la pittoresque station balnéaire basque de Guéthary, la famille de Chastenet revient après 17 ans d'absence dans leur propriété familiale, l'Etxea. Agnès, la matriarche autoritaire, accompagnée de son mari le chef étoilé Alexandre, de leur fille aînée Garance et de son fiancé architecte Eliott, ainsi que de leur fils cadet Augustin, projette de transformer un hôtel local en établissement de luxe baptisé « Aldea ». Ce projet implique le rachat du bar de plage de Mikel Basagoiti, sur lequel lorgnait déjà Patxi Aparra, surfeur local endetté cherchant à sauver sa famille de la faillite. Le retour des Chastenet rouvre de vieilles blessures : Agnès accuse Patxi d'avoir tué son père 17 ans plus tôt, et Garance, promise à Eliott, se retrouve déchirée par ses sentiments pour Patxi. Tensions, manipulations, trahisons et secrets s'accumulent, tandis que Patxi, piégé par son ami Roméo agissant pour le compte d'Agnès, est sur le point de commettre un cambriolage qui pourrait lui coûter sa liberté.</p>
-
-    <p class="note-line">Série très chorale : peu ou pas d'indisponibilités exigé. Merci de préciser si les comédiens proposés ont un ancrage dans le Sud-Ouest.<br>NB : Nicolas Derouet Casting n'est pas en charge des rôles d'Agnès, Garance et Patxi.</p>
+    <p class="synopsis">Un gramme, une trace, un geste banal. La série suit la drogue comme un protagoniste, remontant le fil invisible qui relie l'insouciance d'une soirée à la violence d'un système global.</p>
 
     <div id="roles"></div>
     <datalist id="known-agencies-list"></datalist>
@@ -204,6 +201,21 @@
   </div>
 
 <script>
+function dedupeSuggestions(values) {
+  const normKey = v => String(v || "").trim().replace(/\s+/g, " ").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const isMixedCase = s => /[a-zà-ÿ]/.test(s) && /[A-ZÀ-Ý]/.test(s);
+  const best = new Map();
+  (values || []).forEach(raw => {
+    const v = String(raw || "").trim().replace(/\s+/g, " ");
+    if (!v) return;
+    const k = normKey(v);
+    const cur = best.get(k);
+    if (!cur || (!isMixedCase(cur) && isMixedCase(v))) best.set(k, v);
+  });
+  return [...best.values()].sort((a, b) => a.localeCompare(b, "fr"));
+}
+
+
 const container = document.getElementById("roles");
 
 async function resizeImage(file, maxDim = 500, quality = 0.75) {
@@ -251,7 +263,7 @@ async function init() {
       if (!data) return;
       const fill = (listId, values) => {
         const el = document.getElementById(listId);
-        if (el) el.innerHTML = (values || []).map(v => '<option value="' + v.replace(/</g, "&lt;") + '">').join("");
+        if (el) el.innerHTML = dedupeSuggestions(values).map(v => '<option value="' + v.replace(/</g, "&lt;") + '">').join("");
       };
       fill("known-agencies-list", data.agencies);
       fill("known-agents-list", data.agents);

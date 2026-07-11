@@ -395,6 +395,9 @@
   .propose-row { border-top: 1px dashed var(--line); }
   .panel-close { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 400; }
   .panel-close:hover { color: var(--fg); border-color: var(--green-light); }
+  .decline-btn { background: transparent; border: 1px solid var(--non); color: var(--non); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .decline-btn:hover { background: var(--non); color: #fff; }
+  .decline-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
   .merge-role-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .merge-role-btn:hover { background: var(--peutetre); color: #fff; }
   .slot-admin-day { margin-bottom: 20px; }
@@ -503,6 +506,7 @@
           <div class="tb-btns">
             <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
             <button class="refresh" id="toggle-import-panel" style="border-color:var(--oui);color:var(--oui);">📥 Importer une liste</button>
+            <button class="refresh" id="toggle-agents-panel" style="border-color:var(--oui);color:var(--oui);">🗂 Agents</button>
           </div>
         </div>
         <div class="tb-group">
@@ -609,6 +613,53 @@
           </div>
         </form>
         <div id="contacts-list" style="margin-top:20px;"></div>
+      </div>
+
+      <div id="agents-panel" class="add-profile-panel" style="display:none;">
+        <h3 style="display:flex; align-items:center;"><span style="flex:1;">🗂 Répertoire d'agents</span><button type="button" class="panel-close" data-panel="agents-panel">✕ Fermer</button></h3>
+        <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">Ta base d'agences et d'agents : email et téléphone à portée de main. Le bouton d'import récupère automatiquement les agents présents dans tes candidatures.</p>
+        <form id="add-agent-form">
+          <div>
+            <label>Agence *</label>
+            <input type="text" name="agency" required placeholder="Time Art, UBBA...">
+          </div>
+          <div>
+            <label>Agent</label>
+            <input type="text" name="name" placeholder="Prénom Nom">
+          </div>
+          <div>
+            <label>Email *</label>
+            <input type="email" name="email" required placeholder="agent@agence.fr">
+          </div>
+          <div>
+            <label>Téléphone</label>
+            <input type="tel" name="phone" placeholder="01 23 45 67 89">
+          </div>
+          <div>
+            <label>Assistant·e (d'autres via « Modifier »)</label>
+            <input type="text" name="assistantName" placeholder="Prénom Nom">
+          </div>
+          <div>
+            <label>Email assistant·e</label>
+            <input type="email" name="assistantEmail" placeholder="assistant@agence.fr">
+          </div>
+          <div>
+            <label>Téléphone assistant·e</label>
+            <input type="tel" name="assistantPhone" placeholder="01 23 45 67 89">
+          </div>
+          <div class="full">
+            <label>Notes</label>
+            <input type="text" name="notes" placeholder="Préfère être appelée le matin, gère surtout les 16-25 ans...">
+          </div>
+          <div class="full add-profile-actions">
+            <button type="submit">Ajouter l'agent</button>
+            <button type="button" id="import-agents-btn" style="background:transparent; border:1px solid var(--oui); color:var(--oui);">📥 Importer depuis les candidatures</button>
+            <button type="button" id="launch-casting-btn" style="background:var(--green); border:none; color:#fff;">📣 Lancement de casting</button>
+            <span class="add-profile-msg" id="add-agent-msg"></span>
+          </div>
+        </form>
+        <input type="text" id="agents-search" placeholder="🔍 Rechercher une agence, un agent..." style="width:100%; margin-top:18px; background:var(--field); border:1px solid var(--line); border-radius:8px; color:var(--fg); padding:10px 14px; font-size:13px;">
+        <div id="agents-list" style="margin-top:12px;"></div>
       </div>
 
       <div id="import-panel" class="add-profile-panel" style="display:none;">
@@ -1754,6 +1805,20 @@ async function refreshRoles() {
   }
 }
 
+function dedupeSuggestions(values) {
+  const normKey = v => String(v || "").trim().replace(/\s+/g, " ").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const isMixedCase = s => /[a-zà-ÿ]/.test(s) && /[A-ZÀ-Ý]/.test(s);
+  const best = new Map();
+  (values || []).forEach(raw => {
+    const v = String(raw || "").trim().replace(/\s+/g, " ");
+    if (!v) return;
+    const k = normKey(v);
+    const cur = best.get(k);
+    if (!cur || (!isMixedCase(cur) && isMixedCase(v))) best.set(k, v);
+  });
+  return [...best.values()].sort((a, b) => a.localeCompare(b, "fr"));
+}
+
 async function refreshKnownContacts() {
   try {
     const res = await fetch("/api/known-agents", { cache: "no-store" });
@@ -1761,7 +1826,7 @@ async function refreshKnownContacts() {
     const data = await res.json();
     const fill = (listId, values) => {
       const el = document.getElementById(listId);
-      if (el) el.innerHTML = (values || []).map(v => '<option value="' + escapeHtml(v) + '">').join("");
+      if (el) el.innerHTML = dedupeSuggestions(values).map(v => '<option value="' + escapeHtml(v) + '">').join("");
     };
     fill("known-agencies-list", data.agencies);
     fill("known-agents-list", data.agents);
@@ -1842,7 +1907,7 @@ function fmtProposal(s) {
 // Deux situations : self-tape OU casting présentiel.
 // Sans type explicite, on considère "self-tape" si une scène a été envoyée ou une vidéo reçue (rétrocompatible).
 function essaiStateFor(s) {
-  const mode = s.essaiMode || ((s.sceneSentAt || s.vimeo) ? "selftape" : "");
+  const mode = s.essaiMode || (s.sceneSentAt ? "selftape" : "");
   if (mode === "presentiel") {
     const cb = !!s.callback;
     if (s.essaiDate) {
@@ -1853,6 +1918,9 @@ function essaiStateFor(s) {
       }
       return { cls: cb ? "tape-late" : "tape-wait", icon: cb ? "🔁" : "📅", label: (cb ? "🔁 Call back le " : "📅 Convoqué le ") + dateStr + " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), waiting: false };
     }
+    if (s.vimeo) {
+      return { cls: "tape-ok", icon: "🎥", label: "🎥 " + (cb ? "Call back" : "Essai") + " passé — vidéo disponible", waiting: false };
+    }
     if (s.proposalDay) {
       return { cls: "tape-wait", icon: "📨", label: "📨 " + (cb ? "Call back" : "Essai") + " proposé : " + fmtProposal(s) + " — en attente de l'agent", waiting: false };
     }
@@ -1860,11 +1928,15 @@ function essaiStateFor(s) {
   }
   if (mode === "selftape") {
     if (s.vimeo) return { cls: "tape-ok", icon: "🎬", label: "🎬 Self-tape reçue", waiting: false };
+    // (suite inchangée)
     if (s.sceneSentAt) {
       const dd = daysSince(s.sceneSentAt);
       return { cls: dd >= TAPE_LATE_DAYS ? "tape-late" : "tape-wait", icon: "⏳", label: "⏳ Self-tape attendue — J+" + dd, waiting: true };
     }
     return { cls: "tape-wait", icon: "🎬", label: "🎬 Self-tape — scène à envoyer", waiting: false };
+  }
+  if (s.vimeo) {
+    return { cls: "tape-ok", icon: "🎬", label: "🎬 Vidéo disponible", waiting: false };
   }
   return null;
 }
@@ -1877,6 +1949,330 @@ document.querySelectorAll(".panel-close").forEach(btn => {
     if (panel) panel.style.display = "none";
   });
 });
+
+// ===== Répertoire d'agents =====
+let AGENTS = [];
+
+document.getElementById("toggle-agents-panel").addEventListener("click", () => {
+  const panel = document.getElementById("agents-panel");
+  const opening = panel.style.display === "none";
+  panel.style.display = opening ? "block" : "none";
+  if (opening) refreshAgents();
+});
+
+async function refreshAgents() {
+  try {
+    const res = await fetch("/api/agents?t=" + Date.now(), {
+      headers: { "x-dashboard-password": PASSWORD },
+      cache: "no-store"
+    });
+    if (res.ok) {
+      const data = await res.json();
+      AGENTS = data.agents || [];
+    }
+  } catch {}
+  renderAgentsList();
+}
+
+function renderAgentsList() {
+  const listEl = document.getElementById("agents-list");
+  if (!listEl) return;
+  const nrm = s => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const q = nrm(document.getElementById("agents-search").value || "");
+  listEl.innerHTML = "";
+  const filtered = [...AGENTS].sort((a, b) => a.agency.localeCompare(b.agency, "fr") || (a.name || "").localeCompare(b.name || "", "fr"))
+    .filter(a => !q || nrm(a.agency).includes(q) || nrm(a.name).includes(q) || nrm(a.email).includes(q) || nrm(a.notes).includes(q) ||
+      (a.assistants || []).some(x => nrm(x.name).includes(q) || nrm(x.email).includes(q)));
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div class="empty">' + (AGENTS.length === 0 ? "Aucun agent enregistré. Utilise « 📥 Importer depuis les candidatures » pour démarrer." : "Aucun résultat.") + '</div>';
+    return;
+  }
+  const inputStyle = "background:var(--field); border:1px solid var(--line); border-radius:6px; color:var(--fg); padding:6px 8px; font-size:12px;";
+
+  filtered.forEach(a => {
+    const row = document.createElement("div");
+    row.className = "slot-admin-item";
+    row.style.flexWrap = "wrap";
+
+    const display = () => {
+      const asstLines = (a.assistants || []).map(x =>
+        "Ass. : " + [x.name, x.email, x.phone ? "📞 " + x.phone : ""].filter(Boolean).join(" · ")
+      );
+      const line2 = asstLines.concat(a.notes ? ["📝 " + a.notes] : []).join("   —   ");
+      row.innerHTML =
+        '<span style="font-weight:800; font-size:13px;">' + escapeHtml(a.agency) + '</span>' +
+        '<span class="sa-meta">' + escapeHtml(a.name || "—") + '</span>' +
+        '<span class="sa-status" style="flex:1; color:var(--gray); font-size:12px;">' + escapeHtml(a.email) + (a.phone ? ' · 📞 ' + escapeHtml(a.phone) : '') + '</span>' +
+        '<button class="ag-edit">Modifier</button>' +
+        '<button class="sa-delete">Supprimer</button>' +
+        (line2 ? '<span style="flex-basis:100%; font-size:11px; color:var(--gray); padding-left:2px; line-height:1.6;">' + escapeHtml(line2) + '</span>' : '');
+      row.querySelector(".ag-edit").addEventListener("click", edit);
+      row.querySelector(".sa-delete").addEventListener("click", async () => {
+        if (!confirm("Supprimer " + a.agency + (a.name ? " (" + a.name + ")" : "") + " du répertoire ?")) return;
+        await agentAction({ action: "delete", id: a.id });
+      });
+    };
+
+    const edit = () => {
+      row.innerHTML = "";
+      const mainLine = document.createElement("div");
+      mainLine.style.cssText = "display:flex; gap:6px; flex-wrap:wrap; flex-basis:100%;";
+      mainLine.innerHTML =
+        '<input class="ag-agency" value="' + escapeHtml(a.agency) + '" placeholder="Agence *" style="' + inputStyle + ' width:140px;">' +
+        '<input class="ag-name" value="' + escapeHtml(a.name || "") + '" placeholder="Agent" style="' + inputStyle + ' width:130px;">' +
+        '<input class="ag-email" value="' + escapeHtml(a.email) + '" placeholder="Email *" style="' + inputStyle + ' flex:1; min-width:160px;">' +
+        '<input class="ag-phone" value="' + escapeHtml(a.phone || "") + '" placeholder="Téléphone" style="' + inputStyle + ' width:120px;">';
+      row.appendChild(mainLine);
+
+      const asstWrap = document.createElement("div");
+      asstWrap.style.cssText = "flex-basis:100%; display:flex; flex-direction:column; gap:6px;";
+      row.appendChild(asstWrap);
+      const addAsstRow = (x) => {
+        const r = document.createElement("div");
+        r.className = "ag-asst-row";
+        r.style.cssText = "display:flex; gap:6px; flex-wrap:wrap; align-items:center;";
+        r.innerHTML =
+          '<span style="font-size:11px; color:var(--gray); width:34px;">Ass.</span>' +
+          '<input class="aa-name" value="' + escapeHtml((x && x.name) || "") + '" placeholder="Nom" style="' + inputStyle + ' width:130px;">' +
+          '<input class="aa-email" value="' + escapeHtml((x && x.email) || "") + '" placeholder="Email" style="' + inputStyle + ' flex:1; min-width:150px;">' +
+          '<input class="aa-phone" value="' + escapeHtml((x && x.phone) || "") + '" placeholder="Téléphone" style="' + inputStyle + ' width:120px;">' +
+          '<button class="aa-remove" title="Retirer cet·te assistant·e" style="background:transparent; border:1px solid var(--non); color:var(--non); border-radius:6px; padding:5px 9px; font-size:11px; cursor:pointer;">✕</button>';
+        r.querySelector(".aa-remove").addEventListener("click", () => r.remove());
+        asstWrap.appendChild(r);
+      };
+      (a.assistants && a.assistants.length > 0 ? a.assistants : []).forEach(addAsstRow);
+
+      const controls = document.createElement("div");
+      controls.style.cssText = "flex-basis:100%; display:flex; gap:8px; flex-wrap:wrap; align-items:center;";
+      controls.innerHTML =
+        '<button class="aa-add" style="background:transparent; border:1px solid var(--oui); color:var(--oui); border-radius:6px; padding:6px 10px; font-size:11px; cursor:pointer;">+ Assistant·e</button>' +
+        '<input class="ag-notes" value="' + escapeHtml(a.notes || "") + '" placeholder="Notes" style="' + inputStyle + ' flex:1; min-width:180px;">' +
+        '<button class="ag-save" style="background:var(--green); border:none; color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">Enregistrer</button>' +
+        '<button class="ag-cancel">Annuler</button>' +
+        '<span class="ag-msg" style="font-size:11px; color:var(--non);"></span>';
+      row.appendChild(controls);
+      controls.querySelector(".aa-add").addEventListener("click", () => addAsstRow(null));
+      controls.querySelector(".ag-cancel").addEventListener("click", display);
+      controls.querySelector(".ag-save").addEventListener("click", async () => {
+        const assistants = [...asstWrap.querySelectorAll(".ag-asst-row")].map(r => ({
+          name: r.querySelector(".aa-name").value,
+          email: r.querySelector(".aa-email").value,
+          phone: r.querySelector(".aa-phone").value
+        })).filter(x => x.name.trim() || x.email.trim() || x.phone.trim());
+        await agentAction({ action: "update", id: a.id, agent: {
+          agency: row.querySelector(".ag-agency").value,
+          name: row.querySelector(".ag-name").value,
+          email: row.querySelector(".ag-email").value,
+          phone: row.querySelector(".ag-phone").value,
+          assistants,
+          notes: controls.querySelector(".ag-notes").value
+        } });
+      });
+    };
+
+    display();
+    listEl.appendChild(row);
+  });
+}
+
+async function agentAction(payload) {
+  try {
+    const res = await fetch("/api/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify(payload)
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert("Erreur : " + (body.error || res.status));
+    } else {
+      AGENTS = body.agents || AGENTS;
+    }
+  } catch {
+    alert("Erreur de connexion.");
+  }
+  renderAgentsList();
+  return true;
+}
+
+document.getElementById("agents-search").addEventListener("input", renderAgentsList);
+
+document.getElementById("add-agent-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const msg = document.getElementById("add-agent-msg");
+  const data = Object.fromEntries(new FormData(form).entries());
+  msg.textContent = "Ajout...";
+  const firstAssistant = (data.assistantName || data.assistantEmail || data.assistantPhone)
+    ? [{ name: data.assistantName, email: data.assistantEmail, phone: data.assistantPhone }] : [];
+  await agentAction({ action: "add", agent: { agency: data.agency, name: data.name, email: data.email, phone: data.phone, assistants: firstAssistant, notes: data.notes } });
+  msg.textContent = "";
+  form.reset();
+});
+
+document.getElementById("import-agents-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("add-agent-msg");
+  const candidates = LAST_SUBMISSIONS.filter(s => s.agency && s.email)
+    .map(s => ({ agency: s.agency, name: s.agentName || "", email: s.email, phone: s.phone || "", assistants: s.assistantName ? [{ name: s.assistantName, email: "", phone: "" }] : [] }));
+  if (candidates.length === 0) {
+    msg.textContent = "Aucune agence exploitable dans les candidatures.";
+    return;
+  }
+  if (!confirm("Importer les agents trouvés dans " + candidates.length + " candidature(s) ?\nLes doublons (même email ou même agence+agent) seront ignorés automatiquement.")) return;
+  msg.textContent = "Import...";
+  try {
+    const res = await fetch("/api/agents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ action: "import", agents: candidates })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      msg.textContent = "Erreur : " + (body.error || res.status);
+      return;
+    }
+    AGENTS = body.agents || [];
+    msg.textContent = body.added + " agent(s) importé(s) ✓";
+    renderAgentsList();
+    setTimeout(() => { msg.textContent = ""; }, 3000);
+  } catch {
+    msg.textContent = "Erreur de connexion.";
+  }
+});
+
+document.getElementById("launch-casting-btn").addEventListener("click", openLaunchModal);
+
+async function openLaunchModal() {
+  const modal = openModal("📣 Lancement de casting", "Un bel email visuel : bannière du projet, rôles recherchés, bouton vers la plateforme. Envoyé en copie cachée — les agences ne se voient pas entre elles.", { wide: true });
+  modal.body.innerHTML = '<div class="empty">Chargement...</div>';
+  if (AGENTS.length === 0) await refreshAgents();
+  await refreshRoles();
+  modal.body.innerHTML = "";
+
+  if (AGENTS.length === 0) {
+    modal.body.innerHTML = '<div class="empty">Le répertoire d\'agents est vide.<br>Utilise « 📥 Importer depuis les candidatures » ou ajoute des agents d\'abord.</div>';
+    return;
+  }
+
+  const section = (label) => {
+    const h = document.createElement("p");
+    h.style.cssText = "font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--green-light); margin:16px 0 8px;";
+    h.textContent = label;
+    return h;
+  };
+
+  // Message d'introduction
+  modal.body.appendChild(section("Message d'introduction"));
+  const msgInput = document.createElement("textarea");
+  msgInput.value = "Nous lançons le casting de ORAGE. Vous trouverez ci-dessous les rôles recherchés — vos propositions sont les bienvenues via notre plateforme.";
+  msgInput.style.cssText = "width:100%; min-height:64px; background:var(--field); border:1px solid var(--line); border-radius:8px; color:var(--fg); padding:10px 12px; font-size:13px; font-family:inherit; resize:vertical;";
+  modal.body.appendChild(msgInput);
+
+  // Rôles à annoncer
+  modal.body.appendChild(section("Rôles à annoncer"));
+  const selectedRoles = new Set();
+  const rolesWrap = document.createElement("div");
+  rolesWrap.style.cssText = "display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:6px;";
+  ROLES.forEach(r => {
+    const open = (r.processStatus || "recherche") === "recherche";
+    if (open) selectedRoles.add(r.id);
+    const lab = document.createElement("label");
+    lab.style.cssText = "display:flex; align-items:center; gap:8px; font-size:12.5px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; cursor:pointer;" + (open ? "" : " opacity:0.55;");
+    lab.innerHTML = '<input type="checkbox"' + (open ? " checked" : "") + '> ' + escapeHtml(r.name) + (open ? '' : ' <span style="color:var(--gray); font-size:10px;">(fermé)</span>');
+    lab.querySelector("input").addEventListener("change", e => {
+      if (e.target.checked) selectedRoles.add(r.id); else selectedRoles.delete(r.id);
+      refreshSummary();
+    });
+    rolesWrap.appendChild(lab);
+  });
+  modal.body.appendChild(rolesWrap);
+
+  // Destinataires
+  modal.body.appendChild(section("Agences destinataires"));
+  const selectedAgents = new Set(AGENTS.map(a => a.id));
+  const toggleAll = document.createElement("label");
+  toggleAll.style.cssText = "display:inline-flex; align-items:center; gap:8px; font-size:12px; margin-bottom:8px; cursor:pointer; color:var(--gray);";
+  toggleAll.innerHTML = '<input type="checkbox" checked> Tout cocher / décocher';
+  modal.body.appendChild(toggleAll);
+  const agentsWrap = document.createElement("div");
+  agentsWrap.style.cssText = "display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:6px; max-height:30vh; overflow-y:auto;";
+  const agentCbs = [];
+  [...AGENTS].sort((a, b) => a.agency.localeCompare(b.agency, "fr")).forEach(a => {
+    const lab = document.createElement("label");
+    lab.style.cssText = "display:flex; align-items:center; gap:8px; font-size:12.5px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; cursor:pointer;";
+    lab.innerHTML = '<input type="checkbox" checked> <span style="font-weight:700;">' + escapeHtml(a.agency) + '</span> <span style="color:var(--gray); font-size:11px;">' + escapeHtml(a.name || a.email) + '</span>';
+    const cb = lab.querySelector("input");
+    agentCbs.push([cb, a.id]);
+    cb.addEventListener("change", e => {
+      if (e.target.checked) selectedAgents.add(a.id); else selectedAgents.delete(a.id);
+      refreshSummary();
+    });
+    agentsWrap.appendChild(lab);
+  });
+  toggleAll.querySelector("input").addEventListener("change", e => {
+    agentCbs.forEach(([cb, aid]) => {
+      cb.checked = e.target.checked;
+      if (e.target.checked) selectedAgents.add(aid); else selectedAgents.delete(aid);
+    });
+    refreshSummary();
+  });
+  modal.body.appendChild(agentsWrap);
+
+  // Options + envoi
+  const pwdLab = document.createElement("label");
+  pwdLab.style.cssText = "display:flex; align-items:center; gap:8px; font-size:13px; margin:14px 0 10px; cursor:pointer;";
+  pwdLab.innerHTML = '<input type="checkbox" checked> Inclure le mot de passe d\'accès agences dans l\'email';
+  const pwdCb = pwdLab.querySelector("input");
+  modal.body.appendChild(pwdLab);
+
+  const footer = document.createElement("div");
+  footer.style.cssText = "display:flex; align-items:center; gap:10px;";
+  const sendBtn = document.createElement("button");
+  sendBtn.className = "compare-launch-btn";
+  const msg = document.createElement("span");
+  msg.style.cssText = "font-size:12px; color:var(--gray);";
+  footer.appendChild(sendBtn);
+  footer.appendChild(msg);
+  modal.body.appendChild(footer);
+
+  function refreshSummary() {
+    sendBtn.textContent = "📣 Envoyer à " + selectedAgents.size + " agence(s) — " + selectedRoles.size + " rôle(s)";
+    sendBtn.disabled = selectedAgents.size === 0 || selectedRoles.size === 0;
+  }
+  refreshSummary();
+
+  sendBtn.addEventListener("click", async () => {
+    if (!confirm("Envoyer le lancement de casting à " + selectedAgents.size + " agence(s) ?\n(Envoi en copie cachée — destinataires invisibles entre eux.)")) return;
+    sendBtn.disabled = true;
+    msg.textContent = "Envoi...";
+    try {
+      const res = await fetch("/api/send-launch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({
+          agentIds: [...selectedAgents],
+          roleIds: [...selectedRoles],
+          message: msgInput.value.trim(),
+          includePassword: pwdCb.checked
+        })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        msg.style.color = "var(--non)";
+        msg.textContent = "Erreur : " + (body.error || res.status);
+        sendBtn.disabled = false;
+        return;
+      }
+      msg.style.color = "var(--oui)";
+      msg.textContent = "Lancement envoyé à " + body.sentTo + " agence(s) ✓";
+      setTimeout(() => modal.close(), 1800);
+    } catch {
+      msg.style.color = "var(--non)";
+      msg.textContent = "Erreur de connexion.";
+      sendBtn.disabled = false;
+    }
+  });
+}
 
 // ===== Contacts du projet =====
 let CONTACTS = [];
@@ -2883,7 +3279,7 @@ function buildCard(s, opts) {
   const tape = archived ? null : essaiStateFor(s);
   card.innerHTML =
     ('<div class="sub-photo" data-photo-id="' + s.id + '"></div>') +
-    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.agentName ? " · Agent : " + escapeHtml(s.agentName) : "") + (s.assistantName ? " · Ass. : " + escapeHtml(s.assistantName) : "") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + (s.internalStatus ? ' · <span class="internal-status-tag">' + INTERNAL_STATUS_LABELS[s.internalStatus] + '</span>' : "") + '</span>' +
+    '<div class="sub-name">' + s.name + '<span>' + (s.agency || "—") + (s.agentName ? " · Agent : " + escapeHtml(s.agentName) : "") + (s.assistantName ? " · Ass. : " + escapeHtml(s.assistantName) : "") + (s.email ? " · " + s.email : "") + (s.email2 ? " · " + s.email2 : "") + (s.phone ? " · 📞 " + escapeHtml(s.phone) : "") + (s.internalStatus ? ' · <span class="internal-status-tag">' + INTERNAL_STATUS_LABELS[s.internalStatus] + '</span>' : "") + '</span>' +
     (tape ? '<div><span class="tape-badge ' + tape.cls + '">' + tape.label + '</span></div>' : "") +
     '</div>' +
     (archived ? "" :
@@ -2944,6 +3340,13 @@ function buildCard(s, opts) {
           '</div>' +
         '</div>'
       ) +
+      (!archived && statusVal === "non" ?
+        '<div class="essai-row decline-row">' +
+          '<label>Non retenu</label>' +
+          '<button class="decline-btn" title="Email courtois à l\'agence : le comédien n\'a pas été retenu, avec remerciements et porte ouverte pour un prochain projet">💌 Prévenir l\'agence</button>' +
+          '<span class="decline-info">' + (s.declineSentAt ? "Agence prévenue le " + new Date(s.declineSentAt).toLocaleDateString("fr-FR") : "") + '</span>' +
+        '</div>'
+      : "") +
       (archived ? "" :
         '<div class="essai-row">' +
           '<label>Type d\'essai</label>' +
@@ -2988,6 +3391,12 @@ function buildCard(s, opts) {
           '<span class="remind-info">' + (s.reminderSentAt ? "Relancé le " + new Date(s.reminderSentAt).toLocaleDateString("fr-FR") + (s.reminderCount > 1 ? " (×" + s.reminderCount + ")" : "") : "") + '</span>' +
         '</div>'
       ) +
+      '<div class="vimeo-row phone-row">' +
+        '<label>📞 Tél. agence</label>' +
+        '<input type="text" class="phone-input" placeholder="06 12 34 56 78" value="' + escapeHtml(s.phone || "") + '" style="width:160px; background:var(--field); border:1px solid var(--line); border-radius:6px; color:var(--fg); padding:6px 8px; font-size:12px;">' +
+        '<button class="phone-save" style="background:var(--green); border:none; color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">Enregistrer</button>' +
+        '<span class="phone-msg" style="font-size:11px; color:var(--oui);"></span>' +
+      '</div>' +
       '<div class="vimeo-row">' +
         '<label>Self-tape / essai</label>' +
         '<input type="text" class="vimeo-input" placeholder="https://... (Vimeo, WeTransfer, Drive)" value="' + (s.vimeo || "") + '">' +
@@ -3190,6 +3599,33 @@ function buildCard(s, opts) {
           }
         });
       }
+      const declineBtn = card.querySelector(".decline-btn");
+      if (declineBtn) {
+        const declineInfo = card.querySelector(".decline-info");
+        declineBtn.addEventListener("click", async () => {
+          if (!confirm("Envoyer à " + (s.email || "(aucun email)") + " l'email de non-retenue pour " + s.name + " ?\n\nFormulation courtoise : remerciements" + (s.vimeo ? " (self-tape mentionnée)" : "") + ", choix porté sur un autre profil, candidature conservée, « en espérant à très bientôt sur un nouveau projet ».")) return;
+          declineBtn.disabled = true;
+          declineInfo.textContent = "Envoi...";
+          try {
+            const res = await fetch("/api/send-decline", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+              body: JSON.stringify({ id: s.id })
+            });
+            const body = await res.json().catch(() => ({}));
+            if (res.ok) {
+              declineInfo.textContent = "Agence prévenue ✓";
+              setTimeout(loadData, 1200);
+            } else {
+              declineInfo.textContent = "Erreur : " + (body.error || res.status);
+              declineBtn.disabled = false;
+            }
+          } catch {
+            declineInfo.textContent = "Erreur de connexion.";
+            declineBtn.disabled = false;
+          }
+        });
+      }
       const proposeBtn = card.querySelector(".propose-btn");
       if (proposeBtn) {
         const proposeInfo = card.querySelector(".propose-info");
@@ -3329,6 +3765,17 @@ function buildCard(s, opts) {
   const vimeoInput = card.querySelector(".vimeo-input");
   const vimeoBtn = card.querySelector(".vimeo-save");
   const vimeoMsg = card.querySelector(".vimeo-saved-msg");
+  const phoneSaveBtn = card.querySelector(".phone-save");
+  if (phoneSaveBtn) {
+    const phoneMsg = card.querySelector(".phone-msg");
+    phoneSaveBtn.addEventListener("click", async () => {
+      phoneMsg.textContent = "...";
+      const ok = await updateField(s.id, "phone", card.querySelector(".phone-input").value.trim());
+      phoneMsg.textContent = ok ? "Enregistré ✓" : "Erreur";
+      setTimeout(() => { phoneMsg.textContent = ""; }, 2000);
+      if (ok) setTimeout(loadData, 800);
+    });
+  }
   vimeoBtn.addEventListener("click", async () => {
     vimeoMsg.textContent = "...";
     const val = vimeoInput.value.trim();
