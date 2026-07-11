@@ -593,9 +593,13 @@
               <option value="Chargé de production"></option><option value="Chargée de production"></option>
             </datalist>
           </div>
-          <div class="full">
+          <div>
             <label>Email *</label>
             <input type="email" name="email" required placeholder="nom@production.fr">
+          </div>
+          <div>
+            <label>Téléphone</label>
+            <input type="tel" name="phone" placeholder="06 12 34 56 78">
           </div>
           <div class="full add-profile-actions">
             <button type="submit">Ajouter le contact</button>
@@ -1889,7 +1893,22 @@ async function refreshContacts() {
   renderContactsList();
 }
 
+const DEFAULT_FONCTIONS = ["Réalisateur", "Réalisatrice", "Producteur", "Productrice", "1er assistant", "1ère assistante", "Directeur de production", "Directrice de production", "Chargé de production", "Chargée de production"];
+
+function refreshFonctionSuggestions() {
+  const dl = document.getElementById("fonction-suggestions");
+  if (!dl) return;
+  const seen = new Set();
+  const all = [];
+  DEFAULT_FONCTIONS.concat(CONTACTS.map(c => (c.fonction || "").trim()).filter(Boolean)).forEach(f => {
+    const k = f.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); all.push(f); }
+  });
+  dl.innerHTML = all.sort((a, b) => a.localeCompare(b, "fr")).map(f => '<option value="' + escapeHtml(f) + '"></option>').join("");
+}
+
 function renderContactsList() {
+  refreshFonctionSuggestions();
   const listEl = document.getElementById("contacts-list");
   if (!listEl) return;
   listEl.innerHTML = "";
@@ -1903,8 +1922,49 @@ function renderContactsList() {
     row.innerHTML =
       '<span style="font-weight:800; font-size:13px;">' + escapeHtml(c.name) + '</span>' +
       '<span class="sa-meta">' + escapeHtml(c.fonction || "—") + '</span>' +
-      '<span class="sa-status" style="flex:1; color:var(--gray); font-size:12px;">' + escapeHtml(c.email) + '</span>' +
+      '<span class="sa-status" style="flex:1; color:var(--gray); font-size:12px;">' + escapeHtml(c.email) + (c.phone ? ' · 📞 ' + escapeHtml(c.phone) : '') + '</span>' +
+      '<button class="ct-edit">Modifier</button>' +
       '<button class="sa-delete">Supprimer</button>';
+    row.querySelector(".ct-edit").addEventListener("click", () => {
+      const inputStyle = "background:var(--field); border:1px solid var(--line); border-radius:6px; color:var(--fg); padding:6px 8px; font-size:12px;";
+      row.innerHTML =
+        '<input class="ct-name" value="' + escapeHtml(c.name) + '" placeholder="Nom" style="' + inputStyle + ' width:150px;">' +
+        '<input class="ct-fonction" value="' + escapeHtml(c.fonction || "") + '" placeholder="Fonction" list="fonction-suggestions" style="' + inputStyle + ' width:150px;">' +
+        '<input class="ct-email" value="' + escapeHtml(c.email) + '" placeholder="Email" style="' + inputStyle + ' flex:1; min-width:160px;">' +
+        '<input class="ct-phone" value="' + escapeHtml(c.phone || "") + '" placeholder="Téléphone" style="' + inputStyle + ' width:130px;">' +
+        '<button class="ct-save" style="background:var(--green); border:none; color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">Enregistrer</button>' +
+        '<button class="ct-cancel">Annuler</button>' +
+        '<span class="ct-msg" style="font-size:11px; color:var(--non);"></span>';
+      row.querySelector(".ct-cancel").addEventListener("click", renderContactsList);
+      row.querySelector(".ct-save").addEventListener("click", async () => {
+        const msg = row.querySelector(".ct-msg");
+        msg.style.color = "var(--gray)";
+        msg.textContent = "...";
+        try {
+          const res = await fetch("/api/contacts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+            body: JSON.stringify({ action: "update", id: c.id, contact: {
+              name: row.querySelector(".ct-name").value,
+              fonction: row.querySelector(".ct-fonction").value,
+              email: row.querySelector(".ct-email").value,
+              phone: row.querySelector(".ct-phone").value
+            } })
+          });
+          const body = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            msg.style.color = "var(--non)";
+            msg.textContent = "Erreur : " + (body.error || res.status);
+            return;
+          }
+          CONTACTS = body.contacts || [];
+          renderContactsList();
+        } catch {
+          msg.style.color = "var(--non)";
+          msg.textContent = "Erreur de connexion.";
+        }
+      });
+    });
     row.querySelector(".sa-delete").addEventListener("click", async () => {
       if (!confirm("Supprimer le contact " + c.name + " ?")) return;
       try {
@@ -1934,7 +1994,7 @@ document.getElementById("add-contact-form").addEventListener("submit", async (e)
     const res = await fetch("/api/contacts", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
-      body: JSON.stringify({ action: "add", contact: { name: data.name, fonction: data.fonction, email: data.email } })
+      body: JSON.stringify({ action: "add", contact: { name: data.name, fonction: data.fonction, email: data.email, phone: data.phone } })
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
