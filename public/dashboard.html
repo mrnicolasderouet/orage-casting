@@ -507,6 +507,7 @@
             <button class="refresh" id="toggle-add-form" style="border-color:var(--oui);color:var(--oui);">+ Ajouter un profil</button>
             <button class="refresh" id="toggle-import-panel" style="border-color:var(--oui);color:var(--oui);">📥 Importer une liste</button>
             <button class="refresh" id="toggle-agents-panel" style="border-color:var(--oui);color:var(--oui);">🗂 Agents</button>
+            <button class="refresh" id="open-agency-view" style="border-color:var(--oui);color:var(--oui);">📇 Par agence</button>
           </div>
         </div>
         <div class="tb-group">
@@ -655,10 +656,13 @@
             <button type="submit">Ajouter l'agent</button>
             <button type="button" id="import-agents-btn" style="background:transparent; border:1px solid var(--oui); color:var(--oui);">📥 Importer depuis les candidatures</button>
             <button type="button" id="launch-casting-btn" style="background:var(--green); border:none; color:#fff;">📣 Lancement de casting</button>
+            <button type="button" id="relance-casting-btn" style="background:transparent; border:1px solid var(--peutetre); color:var(--peutetre);">🔁 Relancer les sans-proposition</button>
+            <button type="button" id="agency-view-btn" style="background:transparent; border:1px solid var(--oui); color:var(--oui);">📇 Toutes les propositions par agence</button>
             <span class="add-profile-msg" id="add-agent-msg"></span>
           </div>
         </form>
         <input type="text" id="agents-search" placeholder="🔍 Rechercher une agence, un agent..." style="width:100%; margin-top:18px; background:var(--field); border:1px solid var(--line); border-radius:8px; color:var(--fg); padding:10px 14px; font-size:13px;">
+        <label style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--gray); margin-top:8px; cursor:pointer;"><input type="checkbox" id="agents-filter-nolaunch"> 🔕 N'afficher que les agences ayant reçu le lancement sans faire de proposition</label>
         <div id="agents-list" style="margin-top:12px;"></div>
       </div>
 
@@ -1974,15 +1978,126 @@ async function refreshAgents() {
   renderAgentsList();
 }
 
+function agentPropositions(a) {
+  const nrm = s => (s || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+  const agAgency = nrm(a.agency);
+  const emails = new Set([nrm(a.email)].concat((a.assistants || []).map(x => nrm(x.email))).filter(Boolean));
+  return LAST_SUBMISSIONS.filter(s =>
+    (agAgency && nrm(s.agency) === agAgency) ||
+    (s.email && emails.has(nrm(s.email))) ||
+    (s.email2 && emails.has(nrm(s.email2)))
+  ).sort((x, y) => new Date(y.submittedAt || 0) - new Date(x.submittedAt || 0));
+}
+
+function buildPropositionRow(s) {
+  const statusVal = normalizeStatus(s.status);
+  const roleObj = ROLES.find(r => r.name === s.role);
+  const gender = (roleObj || {}).gender || "";
+  const row = document.createElement("div");
+  row.className = "slot-admin-item";
+  row.style.cursor = "pointer";
+  row.title = "Ouvrir la fiche de " + s.name;
+  row.innerHTML =
+    '<span style="font-weight:800; font-size:13px;">' + escapeHtml(s.name) + '</span>' +
+    '<span class="sa-meta">' + escapeHtml(s.role) + '</span>' +
+    '<span class="cmp-status ' + statusVal + '">' + statusLabel(statusVal, gender) + '</span>' +
+    (s.internalStatus && INTERNAL_STATUS_LABELS[s.internalStatus] ? '<span class="sa-meta">' + escapeHtml(INTERNAL_STATUS_LABELS[s.internalStatus]) + '</span>' : "") +
+    '<span class="sa-status" style="flex:1; text-align:right; color:var(--gray); font-size:11px;">' +
+      (s.submittedAt ? "proposé le " + new Date(s.submittedAt).toLocaleDateString("fr-FR") : "") +
+      (s.archived ? " · archivé" : "") +
+    '</span>';
+  row.addEventListener("click", () => {
+    const ficheModal = openModal(s.name, s.role, { wide: true });
+    ficheModal.body.appendChild(buildCard(s));
+  });
+  return row;
+}
+
+function openAgentPropositionsModal(a, propositions) {
+  const modal = openModal("🎭 Propositions — " + a.agency + (a.name ? " (" + a.name + ")" : ""),
+    propositions.length + " comédien(s) proposé(s) sur ce projet. Clique sur une ligne pour ouvrir la fiche.", { wide: true });
+  const active = propositions.filter(s => !s.archived);
+  const archived = propositions.filter(s => s.archived);
+  const buildRow = buildPropositionRow;
+
+  active.forEach(s => modal.body.appendChild(buildRow(s)));
+  if (archived.length > 0) {
+    const h = document.createElement("h4");
+    h.style.cssText = "font-size:12px; color:var(--gray); text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px;";
+    h.textContent = "Archivés (" + archived.length + ")";
+    modal.body.appendChild(h);
+    archived.forEach(s => modal.body.appendChild(buildRow(s)));
+  }
+}
+
+async function openAgencyOverview() {
+  const modal = openModal("📇 Propositions par agence", "Toutes les candidatures du projet, groupées par agence. Clique sur une ligne pour ouvrir la fiche.", { wide: true });
+  modal.body.innerHTML = '<div class="empty">Chargement...</div>';
+  if (AGENTS.length === 0) await refreshAgents();
+  modal.body.innerHTML = "";
+
+  const nrm = s => (s || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
+  const isMixed = s => /[a-zà-ÿ]/.test(s) && /[A-ZÀ-Ý]/.test(s);
+
+  const search = document.createElement("input");
+  search.type = "text";
+  search.placeholder = "🔍 Filtrer par agence ou comédien...";
+  search.className = "assign-search";
+  modal.body.appendChild(search);
+  const container = document.createElement("div");
+  modal.body.appendChild(container);
+
+  function renderOverview() {
+    const q = nrm(search.value);
+    container.innerHTML = "";
+    const groups = new Map();
+    LAST_SUBMISSIONS.forEach(s => {
+      const key = nrm(s.agency) || "(sans agence)";
+      if (!groups.has(key)) groups.set(key, { display: (s.agency || "Sans agence").trim(), subs: [] });
+      const g = groups.get(key);
+      const disp = (s.agency || "").trim();
+      if (disp && !isMixed(g.display) && isMixed(disp)) g.display = disp;
+      g.subs.push(s);
+    });
+    const keys = [...groups.keys()].sort((a, b) => groups.get(a).display.localeCompare(groups.get(b).display, "fr"));
+    let shown = 0;
+    keys.forEach(key => {
+      const g = groups.get(key);
+      const matches = q ? (nrm(g.display).includes(q) ? g.subs : g.subs.filter(s => nrm(s.name).includes(q))) : g.subs;
+      if (matches.length === 0) return;
+      shown++;
+      const dayEl = document.createElement("div");
+      dayEl.className = "planning-day";
+      const dir = AGENTS.find(a => nrm(a.agency) === key);
+      const dirInfo = dir
+        ? ' <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--gray); font-size:11px;">· ' +
+          escapeHtml([dir.name, dir.phone ? "📞 " + dir.phone : ""].filter(Boolean).join(" · ")) +
+          (dir.lastLaunchAt ? ' · 📣 ' + new Date(dir.lastLaunchAt).toLocaleDateString("fr-FR") : "") + '</span>'
+        : "";
+      dayEl.innerHTML = '<h4>' + escapeHtml(g.display) + ' (' + g.subs.length + ')' + dirInfo + '</h4>';
+      matches
+        .slice()
+        .sort((x, y) => (x.role || "").localeCompare(y.role || "", "fr") || x.name.localeCompare(y.name, "fr"))
+        .forEach(s => dayEl.appendChild(buildPropositionRow(s)));
+      container.appendChild(dayEl);
+    });
+    if (shown === 0) container.innerHTML = '<div class="empty">Aucun résultat.</div>';
+  }
+  search.addEventListener("input", renderOverview);
+  renderOverview();
+}
+
 function renderAgentsList() {
   const listEl = document.getElementById("agents-list");
   if (!listEl) return;
   const nrm = s => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const q = nrm(document.getElementById("agents-search").value || "");
   listEl.innerHTML = "";
+  const onlyNoProp = document.getElementById("agents-filter-nolaunch") && document.getElementById("agents-filter-nolaunch").checked;
   const filtered = [...AGENTS].sort((a, b) => a.agency.localeCompare(b.agency, "fr") || (a.name || "").localeCompare(b.name || "", "fr"))
     .filter(a => !q || nrm(a.agency).includes(q) || nrm(a.name).includes(q) || nrm(a.email).includes(q) || nrm(a.notes).includes(q) ||
-      (a.assistants || []).some(x => nrm(x.name).includes(q) || nrm(x.email).includes(q)));
+      (a.assistants || []).some(x => nrm(x.name).includes(q) || nrm(x.email).includes(q)))
+    .filter(a => !onlyNoProp || (a.lastLaunchAt && agentPropositions(a).length === 0));
   if (filtered.length === 0) {
     listEl.innerHTML = '<div class="empty">' + (AGENTS.length === 0 ? "Aucun agent enregistré. Utilise « 📥 Importer depuis les candidatures » pour démarrer." : "Aucun résultat.") + '</div>';
     return;
@@ -1994,6 +2109,7 @@ function renderAgentsList() {
     row.className = "slot-admin-item";
     row.style.flexWrap = "wrap";
 
+    const propositions = agentPropositions(a);
     const display = () => {
       const asstLines = (a.assistants || []).map(x =>
         "Ass. : " + [x.name, x.email, x.phone ? "📞 " + x.phone : ""].filter(Boolean).join(" · ")
@@ -2003,9 +2119,15 @@ function renderAgentsList() {
         '<span style="font-weight:800; font-size:13px;">' + escapeHtml(a.agency) + '</span>' +
         '<span class="sa-meta">' + escapeHtml(a.name || "—") + '</span>' +
         '<span class="sa-status" style="flex:1; color:var(--gray); font-size:12px;">' + escapeHtml(a.email) + (a.phone ? ' · 📞 ' + escapeHtml(a.phone) : '') + '</span>' +
+        '<button class="ag-props"' + (propositions.length === 0 ? " disabled style=\"opacity:0.45;\"" : "") + '>🎭 Propositions (' + propositions.length + ')</button>' +
         '<button class="ag-edit">Modifier</button>' +
         '<button class="sa-delete">Supprimer</button>' +
-        (line2 ? '<span style="flex-basis:100%; font-size:11px; color:var(--gray); padding-left:2px; line-height:1.6;">' + escapeHtml(line2) + '</span>' : '');
+        (line2 ? '<span style="flex-basis:100%; font-size:11px; color:var(--gray); padding-left:2px; line-height:1.6;">' + escapeHtml(line2) + '</span>' : '') +
+        (a.lastLaunchAt ? '<span style="flex-basis:100%; font-size:11px; padding-left:2px; color:' + (propositions.length > 0 ? 'var(--oui)' : 'var(--peutetre)') + ';">📣 Casting envoyé le ' + new Date(a.lastLaunchAt).toLocaleDateString("fr-FR") + (propositions.length > 0 ? ' · a proposé ✓' : ' · 🔕 aucune proposition') + '</span>' : '');
+      const propsBtn = row.querySelector(".ag-props");
+      if (propsBtn && propositions.length > 0) {
+        propsBtn.addEventListener("click", () => openAgentPropositionsModal(a, propositions));
+      }
       row.querySelector(".ag-edit").addEventListener("click", edit);
       row.querySelector(".sa-delete").addEventListener("click", async () => {
         if (!confirm("Supprimer " + a.agency + (a.name ? " (" + a.name + ")" : "") + " du répertoire ?")) return;
@@ -2084,7 +2206,7 @@ async function agentAction(payload) {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert("Erreur : " + (body.error || res.status));
+      alert("Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : ""));
     } else {
       AGENTS = body.agents || AGENTS;
     }
@@ -2095,7 +2217,10 @@ async function agentAction(payload) {
   return true;
 }
 
+document.getElementById("open-agency-view").addEventListener("click", openAgencyOverview);
+document.getElementById("agency-view-btn").addEventListener("click", openAgencyOverview);
 document.getElementById("agents-search").addEventListener("input", renderAgentsList);
+document.getElementById("agents-filter-nolaunch").addEventListener("change", renderAgentsList);
 
 document.getElementById("add-agent-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -2128,7 +2253,7 @@ document.getElementById("import-agents-btn").addEventListener("click", async () 
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      msg.textContent = "Erreur : " + (body.error || res.status);
+      msg.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
       return;
     }
     AGENTS = body.agents || [];
@@ -2140,10 +2265,18 @@ document.getElementById("import-agents-btn").addEventListener("click", async () 
   }
 });
 
-document.getElementById("launch-casting-btn").addEventListener("click", openLaunchModal);
+document.getElementById("launch-casting-btn").addEventListener("click", () => openLaunchModal({}));
+document.getElementById("relance-casting-btn").addEventListener("click", () => openLaunchModal({ relance: true }));
 
-async function openLaunchModal() {
-  const modal = openModal("📣 Lancement de casting", "Un bel email visuel : bannière du projet, rôles recherchés, bouton vers la plateforme. Envoyé en copie cachée — les agences ne se voient pas entre elles.", { wide: true });
+async function openLaunchModal(opts) {
+  opts = opts || {};
+  const isRelance = !!opts.relance;
+  const modal = openModal(
+    isRelance ? "🔁 Relance de casting" : "📣 Lancement de casting",
+    isRelance
+      ? "Relance des agences ayant reçu le lancement sans envoyer de proposition. Même email visuel, ton adapté. Copie cachée."
+      : "Un bel email visuel : bannière du projet, rôles recherchés, bouton vers la plateforme. Envoyé en copie cachée — les agences ne se voient pas entre elles.",
+    { wide: true });
   modal.body.innerHTML = '<div class="empty">Chargement...</div>';
   if (AGENTS.length === 0) await refreshAgents();
   await refreshRoles();
@@ -2164,7 +2297,9 @@ async function openLaunchModal() {
   // Message d'introduction
   modal.body.appendChild(section("Message d'introduction"));
   const msgInput = document.createElement("textarea");
-  msgInput.value = "Nous lançons le casting de ORAGE. Vous trouverez ci-dessous les rôles recherchés — vos propositions sont les bienvenues via notre plateforme.";
+  msgInput.value = isRelance
+    ? "Sauf erreur de notre part, nous n'avons pas encore reçu de propositions de votre agence pour ORAGE. Le casting est toujours ouvert — n'hésitez pas à nous faire parvenir vos suggestions via la plateforme, les rôles recherchés sont rappelés ci-dessous."
+    : "Nous lançons le casting de ORAGE. Vous trouverez ci-dessous les rôles recherchés — vos propositions sont les bienvenues via notre plateforme.";
   msgInput.style.cssText = "width:100%; min-height:64px; background:var(--field); border:1px solid var(--line); border-radius:8px; color:var(--fg); padding:10px 12px; font-size:13px; font-family:inherit; resize:vertical;";
   modal.body.appendChild(msgInput);
 
@@ -2187,9 +2322,14 @@ async function openLaunchModal() {
   });
   modal.body.appendChild(rolesWrap);
 
-  // Destinataires
-  modal.body.appendChild(section("Agences destinataires"));
-  const selectedAgents = new Set(AGENTS.map(a => a.id));
+  // Destinataires — en mode relance : uniquement les sans-proposition ayant reçu le lancement
+  modal.body.appendChild(section(isRelance ? "Agences à relancer (lancement reçu, aucune proposition)" : "Agences destinataires"));
+  const relanceTargets = new Set(AGENTS.filter(a => a.lastLaunchAt && agentPropositions(a).length === 0).map(a => a.id));
+  const selectedAgents = isRelance ? new Set(relanceTargets) : new Set(AGENTS.map(a => a.id));
+  if (isRelance && relanceTargets.size === 0) {
+    modal.body.insertAdjacentHTML("beforeend", '<div class="empty">Bonne nouvelle : toutes les agences ayant reçu le lancement ont fait au moins une proposition ! 🎉<br>(Ou aucun lancement n\'a encore été envoyé.)</div>');
+    return;
+  }
   const toggleAll = document.createElement("label");
   toggleAll.style.cssText = "display:inline-flex; align-items:center; gap:8px; font-size:12px; margin-bottom:8px; cursor:pointer; color:var(--gray);";
   toggleAll.innerHTML = '<input type="checkbox" checked> Tout cocher / décocher';
@@ -2200,7 +2340,9 @@ async function openLaunchModal() {
   [...AGENTS].sort((a, b) => a.agency.localeCompare(b.agency, "fr")).forEach(a => {
     const lab = document.createElement("label");
     lab.style.cssText = "display:flex; align-items:center; gap:8px; font-size:12.5px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; cursor:pointer;";
-    lab.innerHTML = '<input type="checkbox" checked> <span style="font-weight:700;">' + escapeHtml(a.agency) + '</span> <span style="color:var(--gray); font-size:11px;">' + escapeHtml(a.name || a.email) + '</span>';
+    const preChecked = selectedAgents.has(a.id);
+    if (isRelance && !preChecked) lab.style.opacity = "0.45";
+    lab.innerHTML = '<input type="checkbox"' + (preChecked ? " checked" : "") + '> <span style="font-weight:700;">' + escapeHtml(a.agency) + '</span> <span style="color:var(--gray); font-size:11px;">' + escapeHtml(a.name || a.email) + '</span>';
     const cb = lab.querySelector("input");
     agentCbs.push([cb, a.id]);
     cb.addEventListener("change", e => {
@@ -2209,6 +2351,7 @@ async function openLaunchModal() {
     });
     agentsWrap.appendChild(lab);
   });
+  toggleAll.querySelector("input").checked = !isRelance;
   toggleAll.querySelector("input").addEventListener("change", e => {
     agentCbs.forEach(([cb, aid]) => {
       cb.checked = e.target.checked;
@@ -2236,13 +2379,13 @@ async function openLaunchModal() {
   modal.body.appendChild(footer);
 
   function refreshSummary() {
-    sendBtn.textContent = "📣 Envoyer à " + selectedAgents.size + " agence(s) — " + selectedRoles.size + " rôle(s)";
+    sendBtn.textContent = (isRelance ? "🔁 Relancer " : "📣 Envoyer à ") + selectedAgents.size + " agence(s) — " + selectedRoles.size + " rôle(s)";
     sendBtn.disabled = selectedAgents.size === 0 || selectedRoles.size === 0;
   }
   refreshSummary();
 
   sendBtn.addEventListener("click", async () => {
-    if (!confirm("Envoyer le lancement de casting à " + selectedAgents.size + " agence(s) ?\n(Envoi en copie cachée — destinataires invisibles entre eux.)")) return;
+    if (!confirm((isRelance ? "Relancer " : "Envoyer le lancement de casting à ") + selectedAgents.size + " agence(s) ?\n(Envoi en copie cachée — destinataires invisibles entre eux.)")) return;
     sendBtn.disabled = true;
     msg.textContent = "Envoi...";
     try {
@@ -2253,18 +2396,20 @@ async function openLaunchModal() {
           agentIds: [...selectedAgents],
           roleIds: [...selectedRoles],
           message: msgInput.value.trim(),
-          includePassword: pwdCb.checked
+          includePassword: pwdCb.checked,
+          mode: isRelance ? "relance" : "launch"
         })
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         msg.style.color = "var(--non)";
-        msg.textContent = "Erreur : " + (body.error || res.status);
+        msg.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
         sendBtn.disabled = false;
         return;
       }
       msg.style.color = "var(--oui)";
-      msg.textContent = "Lancement envoyé à " + body.sentTo + " agence(s) ✓";
+      msg.textContent = (isRelance ? "Relance envoyée à " : "Lancement envoyé à ") + body.sentTo + " agence(s) ✓";
+      refreshAgents();
       setTimeout(() => modal.close(), 1800);
     } catch {
       msg.style.color = "var(--non)";
@@ -2359,7 +2504,7 @@ function renderContactsList() {
           const body = await res.json().catch(() => ({}));
           if (!res.ok) {
             msg.style.color = "var(--non)";
-            msg.textContent = "Erreur : " + (body.error || res.status);
+            msg.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
             return;
           }
           CONTACTS = body.contacts || [];
@@ -2403,7 +2548,7 @@ document.getElementById("add-contact-form").addEventListener("submit", async (e)
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      msg.textContent = "Erreur : " + (body.error || res.status);
+      msg.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
       return;
     }
     CONTACTS = body.contacts || [];
@@ -2489,7 +2634,7 @@ function renderSlotsList() {
           });
           if (!res.ok) {
             const body = await res.json().catch(() => ({}));
-            alert("Erreur : " + (body.error || res.status));
+            alert("Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : ""));
           }
         } catch {
           alert("Erreur de connexion.");
@@ -2696,7 +2841,7 @@ function openAssignModal(slot) {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         msg.style.color = "var(--non)";
-        msg.textContent = "Erreur : " + (body.error || res.status);
+        msg.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
         btn.disabled = false;
         return;
       }
@@ -2724,7 +2869,7 @@ async function slotAction(action, slotId, extra) {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      alert("Erreur : " + (body.error || res.status));
+      alert("Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : ""));
     }
   } catch {
     alert("Erreur de connexion.");
@@ -2779,7 +2924,7 @@ document.getElementById("create-slots-form").addEventListener("submit", async (e
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      msg.textContent = "Erreur : " + (body.error || res.status);
+      msg.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
       return;
     }
     const totalSkipped = preSkipped + (body.skipped || 0);
@@ -3055,7 +3200,7 @@ async function openSendPlanningView(modal) {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         msg.style.color = "var(--non)";
-        msg.textContent = "Erreur : " + (body.error || res.status);
+        msg.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
         sendBtn.disabled = false;
         return;
       }
@@ -3195,7 +3340,7 @@ async function planningAction(payload, modal) {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      alert("Erreur : " + (body.error || res.status));
+      alert("Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : ""));
     }
   } catch {
     alert("Erreur de connexion.");
@@ -3617,7 +3762,7 @@ function buildCard(s, opts) {
               declineInfo.textContent = "Agence prévenue ✓";
               setTimeout(loadData, 1200);
             } else {
-              declineInfo.textContent = "Erreur : " + (body.error || res.status);
+              declineInfo.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
               declineBtn.disabled = false;
             }
           } catch {
@@ -3651,7 +3796,7 @@ function buildCard(s, opts) {
               proposeInfo.textContent = "Proposition envoyée ✓";
               setTimeout(loadData, 1200);
             } else {
-              proposeInfo.textContent = "Erreur : " + (body.error || res.status);
+              proposeInfo.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
               proposeBtn.disabled = false;
             }
           } catch {
@@ -3690,7 +3835,7 @@ function buildCard(s, opts) {
               convInfo.textContent = "Convocation envoyée ✓" + (body.sceneAttached === false ? " (sans PDF : scène introuvable pour ce rôle)" : "");
               setTimeout(loadData, 1500);
             } else {
-              convInfo.textContent = "Erreur : " + (body.error || res.status);
+              convInfo.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
               convocationBtn.disabled = false;
             }
           } catch {
@@ -3717,7 +3862,7 @@ function buildCard(s, opts) {
               inviteInfo.textContent = "Invitation envoyée ✓";
               setTimeout(loadData, 1200);
             } else {
-              inviteInfo.textContent = "Erreur : " + (body.error || res.status);
+              inviteInfo.textContent = "Erreur : " + (body.error || res.status) + (body.detail ? " — " + String(body.detail).slice(0, 300) : "");
               bookingInviteBtn.disabled = false;
             }
           } catch {
