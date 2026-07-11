@@ -8,14 +8,36 @@ const KEY = `${KV_PREFIX}:agents_directory`;
 const norm = s => String(s || "").trim();
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
+function cleanAssistant(x) {
+  const out = { name: norm(x && x.name), email: norm(x && x.email), phone: norm(x && x.phone) };
+  if (out.email && !emailOk(out.email)) out.email = "";
+  return out;
+}
+
 function cleanAgent(a) {
-  const out = {
+  let assistants = Array.isArray(a.assistants) ? a.assistants.map(cleanAssistant) : [];
+  // Rétrocompatibilité : anciens champs assistant à plat
+  if (assistants.length === 0 && (a.assistantName || a.assistantEmail || a.assistantPhone)) {
+    assistants = [cleanAssistant({ name: a.assistantName, email: a.assistantEmail, phone: a.assistantPhone })];
+  }
+  assistants = assistants.filter(x => x.name || x.email || x.phone).slice(0, 10);
+  return {
     agency: norm(a.agency), name: norm(a.name), email: norm(a.email), phone: norm(a.phone),
-    assistantName: norm(a.assistantName), assistantEmail: norm(a.assistantEmail), assistantPhone: norm(a.assistantPhone),
+    assistants,
     notes: norm(a.notes)
   };
-  if (out.assistantEmail && !emailOk(out.assistantEmail)) out.assistantEmail = "";
-  return out;
+}
+
+// Migration à la lecture : les fiches enregistrées avec les anciens champs
+// assistantName/Email/Phone passent au format "assistants: []".
+function liftLegacy(a) {
+  if (Array.isArray(a.assistants)) return a;
+  const migrated = { ...a, assistants: [] };
+  if (a.assistantName || a.assistantEmail || a.assistantPhone) {
+    migrated.assistants = [cleanAssistant({ name: a.assistantName, email: a.assistantEmail, phone: a.assistantPhone })];
+  }
+  delete migrated.assistantName; delete migrated.assistantEmail; delete migrated.assistantPhone;
+  return migrated;
 }
 
 module.exports = async (req, res) => {
@@ -23,7 +45,7 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === "GET") {
-      const agents = (await kvGet(KEY)) || [];
+      const agents = ((await kvGet(KEY)) || []).map(liftLegacy);
       res.status(200).json({ agents });
       return;
     }
@@ -32,7 +54,7 @@ module.exports = async (req, res) => {
       return;
     }
     const { action, agent, agents: incoming, id } = req.body || {};
-    let agents = (await kvGet(KEY)) || [];
+    let agents = ((await kvGet(KEY)) || []).map(liftLegacy);
     const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
     if (action === "add") {
