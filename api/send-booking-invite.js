@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
         subject: `${PROJECT_NAME} — Réservez votre créneau d'essai : ${sub.name} (${sub.role})`,
         html: `
           <p>Bonjour,</p>
-          <p>Dans le cadre du casting de <strong>${PROJECT_NAME}</strong>, nous souhaitons rencontrer <strong>${escapeHtml(sub.name)}</strong> en essai pour le rôle de <strong>${escapeHtml(sub.role)}</strong>.</p>
+          <p>Dans le cadre du casting de <strong>${PROJECT_NAME}</strong>, nous souhaitons ${sub.callback ? "revoir" : "rencontrer"} <strong>${escapeHtml(sub.name)}</strong> en ${sub.callback ? "call back" : "essai"} pour le rôle de <strong>${escapeHtml(sub.role)}</strong>.</p>
           <p>Vous pouvez choisir directement le créneau qui vous convient via ce lien personnel :</p>
           <p style="margin:18px 0;"><a href="${bookingUrl}" style="background:#1a6b3c;color:#ffffff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:bold;">Choisir un créneau d'essai</a></p>
           <p style="font-size:12px;color:#666;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>${bookingUrl}</p>
