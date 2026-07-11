@@ -1978,6 +1978,12 @@ async function refreshAgents() {
   renderAgentsList();
 }
 
+const PROJECT_KEY = "ORAGE".toLowerCase();
+function agentLaunchAt(a) {
+  if (a.lastLaunch && a.lastLaunch[PROJECT_KEY]) return a.lastLaunch[PROJECT_KEY];
+  return a.lastLaunchAt || null;
+}
+
 function agentPropositions(a) {
   const nrm = s => (s || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
   const agAgency = nrm(a.agency);
@@ -2072,7 +2078,7 @@ async function openAgencyOverview() {
       const dirInfo = dir
         ? ' <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--gray); font-size:11px;">· ' +
           escapeHtml([dir.name, dir.phone ? "📞 " + dir.phone : ""].filter(Boolean).join(" · ")) +
-          (dir.lastLaunchAt ? ' · 📣 ' + new Date(dir.lastLaunchAt).toLocaleDateString("fr-FR") : "") + '</span>'
+          (agentLaunchAt(dir) ? ' · 📣 ' + new Date(agentLaunchAt(dir)).toLocaleDateString("fr-FR") : "") + '</span>'
         : "";
       dayEl.innerHTML = '<h4>' + escapeHtml(g.display) + ' (' + g.subs.length + ')' + dirInfo + '</h4>';
       matches
@@ -2097,7 +2103,7 @@ function renderAgentsList() {
   const filtered = [...AGENTS].sort((a, b) => a.agency.localeCompare(b.agency, "fr") || (a.name || "").localeCompare(b.name || "", "fr"))
     .filter(a => !q || nrm(a.agency).includes(q) || nrm(a.name).includes(q) || nrm(a.email).includes(q) || nrm(a.notes).includes(q) ||
       (a.assistants || []).some(x => nrm(x.name).includes(q) || nrm(x.email).includes(q)))
-    .filter(a => !onlyNoProp || (a.lastLaunchAt && agentPropositions(a).length === 0));
+    .filter(a => !onlyNoProp || (agentLaunchAt(a) && agentPropositions(a).length === 0));
   if (filtered.length === 0) {
     listEl.innerHTML = '<div class="empty">' + (AGENTS.length === 0 ? "Aucun agent enregistré. Utilise « 📥 Importer depuis les candidatures » pour démarrer." : "Aucun résultat.") + '</div>';
     return;
@@ -2123,7 +2129,7 @@ function renderAgentsList() {
         '<button class="ag-edit">Modifier</button>' +
         '<button class="sa-delete">Supprimer</button>' +
         (line2 ? '<span style="flex-basis:100%; font-size:11px; color:var(--gray); padding-left:2px; line-height:1.6;">' + escapeHtml(line2) + '</span>' : '') +
-        (a.lastLaunchAt ? '<span style="flex-basis:100%; font-size:11px; padding-left:2px; color:' + (propositions.length > 0 ? 'var(--oui)' : 'var(--peutetre)') + ';">📣 Casting envoyé le ' + new Date(a.lastLaunchAt).toLocaleDateString("fr-FR") + (propositions.length > 0 ? ' · a proposé ✓' : ' · 🔕 aucune proposition') + '</span>' : '');
+        (agentLaunchAt(a) ? '<span style="flex-basis:100%; font-size:11px; padding-left:2px; color:' + (propositions.length > 0 ? 'var(--oui)' : 'var(--peutetre)') + ';">📣 Casting envoyé le ' + new Date(agentLaunchAt(a)).toLocaleDateString("fr-FR") + (propositions.length > 0 ? ' · a proposé ✓' : ' · 🔕 aucune proposition') + '</span>' : '');
       const propsBtn = row.querySelector(".ag-props");
       if (propsBtn && propositions.length > 0) {
         propsBtn.addEventListener("click", () => openAgentPropositionsModal(a, propositions));
@@ -2324,7 +2330,7 @@ async function openLaunchModal(opts) {
 
   // Destinataires — en mode relance : uniquement les sans-proposition ayant reçu le lancement
   modal.body.appendChild(section(isRelance ? "Agences à relancer (lancement reçu, aucune proposition)" : "Agences destinataires"));
-  const relanceTargets = new Set(AGENTS.filter(a => a.lastLaunchAt && agentPropositions(a).length === 0).map(a => a.id));
+  const relanceTargets = new Set(AGENTS.filter(a => agentLaunchAt(a) && agentPropositions(a).length === 0).map(a => a.id));
   const selectedAgents = isRelance ? new Set(relanceTargets) : new Set(AGENTS.map(a => a.id));
   if (isRelance && relanceTargets.size === 0) {
     modal.body.insertAdjacentHTML("beforeend", '<div class="empty">Bonne nouvelle : toutes les agences ayant reçu le lancement ont fait au moins une proposition ! 🎉<br>(Ou aucun lancement n\'a encore été envoyé.)</div>');
