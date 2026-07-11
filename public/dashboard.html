@@ -353,7 +353,9 @@
   .essai-msg { font-size: 11px; color: var(--oui); white-space: nowrap; }
   .planning-day { margin-bottom: 22px; }
   .planning-day h4 { font-size: 13px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 0 0 8px; }
-  .planning-item { display: grid; grid-template-columns: 52px 1.2fr 0.9fr 0.9fr auto; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 13px; }
+  .planning-item { display: grid; grid-template-columns: 34px 52px 1.2fr 0.9fr 0.9fr auto; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 13px; }
+  .planning-item .p-photo { width: 34px; height: 44px; border-radius: 4px; background: var(--field); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .planning-item .p-photo img { width: 100%; height: 100%; object-fit: cover; }
   .planning-item .p-time { font-weight: 800; color: var(--peutetre); }
   .planning-item .p-name { font-weight: 700; }
   .planning-item .p-role { color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -387,6 +389,10 @@
   .convocation-btn { background: var(--green); border: none; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .convocation-btn:hover { opacity: 0.85; }
   .convocation-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
+  .propose-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .propose-btn:hover { background: var(--peutetre); color: #fff; }
+  .propose-info { font-size: 11px; color: var(--gray); white-space: nowrap; }
+  .propose-row { border-top: 1px dashed var(--line); }
   .merge-role-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .merge-role-btn:hover { background: var(--peutetre); color: #fff; }
   .slot-admin-day { margin-bottom: 20px; }
@@ -441,9 +447,9 @@
     .role-manage-item .rm-edit-row.open { grid-template-columns: 1fr; }
     .role-manage-item .rm-row1 { flex-wrap: wrap; }
     .import-row { grid-template-columns: 1fr; }
-    .vimeo-row, .scene-row, .photo-row, .essai-row { flex-wrap: wrap; }
+    .vimeo-row, .scene-row, .photo-row, .essai-row, .propose-row { flex-wrap: wrap; }
     .essai-mode-select, .essai-date-input { flex: 1 1 100%; }
-    .planning-item { grid-template-columns: 52px 1fr; }
+    .planning-item { grid-template-columns: 34px 46px 1fr; }
     .planning-item .p-agency { text-align: left; }
     .vimeo-input { flex: 1 1 100%; }
     .order-item { flex-wrap: wrap; }
@@ -466,6 +472,7 @@
   body.light input[type="date"], body.light input[type="time"], body.light input[type="datetime-local"] { color-scheme: light; }
   body.light .stat .num { color: var(--fg); }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -508,6 +515,7 @@
           <div class="tb-btns">
             <button class="refresh" id="toggle-roles-panel" style="border-color:var(--confirme);color:var(--confirme);">🎭 Gérer les rôles</button>
             <button class="refresh" id="toggle-order-panel" style="border-color:var(--confirme);color:var(--confirme);">🔝 Ordre d'affichage</button>
+            <button class="refresh" id="toggle-contacts-panel" style="border-color:var(--confirme);color:var(--confirme);">👥 Contacts projet</button>
           </div>
         </div>
         <div class="tb-group">
@@ -564,6 +572,37 @@
           </div>
         </form>
         <div id="slots-list" style="margin-top:20px;"></div>
+      </div>
+
+      <div id="contacts-panel" class="add-profile-panel" style="display:none;">
+        <h3>👥 Contacts du projet</h3>
+        <p style="color:var(--gray); font-size:12px; margin:-8px 0 16px;">Réalisateur·trice, producteur·trice, assistant·e... Ces contacts servent de destinataires pour l'envoi du planning des essais.</p>
+        <form id="add-contact-form">
+          <div>
+            <label>Nom *</label>
+            <input type="text" name="name" required placeholder="Prénom Nom">
+          </div>
+          <div>
+            <label>Fonction</label>
+            <input type="text" name="fonction" list="fonction-suggestions" placeholder="Réalisateur, Productrice...">
+            <datalist id="fonction-suggestions">
+              <option value="Réalisateur"></option><option value="Réalisatrice"></option>
+              <option value="Producteur"></option><option value="Productrice"></option>
+              <option value="1er assistant"></option><option value="1ère assistante"></option>
+              <option value="Directeur de production"></option><option value="Directrice de production"></option>
+              <option value="Chargé de production"></option><option value="Chargée de production"></option>
+            </datalist>
+          </div>
+          <div class="full">
+            <label>Email *</label>
+            <input type="email" name="email" required placeholder="nom@production.fr">
+          </div>
+          <div class="full add-profile-actions">
+            <button type="submit">Ajouter le contact</button>
+            <span class="add-profile-msg" id="add-contact-msg"></span>
+          </div>
+        </form>
+        <div id="contacts-list" style="margin-top:20px;"></div>
       </div>
 
       <div id="import-panel" class="add-profile-panel" style="display:none;">
@@ -710,7 +749,9 @@ const ROLE_STATUS_LABELS = { recherche: "En recherche", shortlist: "Shortlist en
 const ROLE_STATUS_ORDER = ["recherche", "shortlist", "caste", "ferme"];
 const STATUS_ORDER = ["confirme", "oui", "peutetre", "non"];
 const INTERNAL_STATUS_LABELS = {
-  "": "— Suivi interne —",
+  "": "— Étape casting —",
+  short_list: "⭐ Short list",
+  call_back: "🔁 Call back",
   a_contacter: "À contacter",
   attente_retour: "En attente de retour",
   disponible: "Disponible",
@@ -721,7 +762,7 @@ const INTERNAL_STATUS_LABELS = {
   essais_disponibles: "Essais disponibles",
   essais_en_cours: "Essais en cours"
 };
-const INTERNAL_STATUS_ORDER = ["", "a_contacter", "attente_retour", "disponible", "indisponible", "interesse", "essais_en_cours", "essais_disponibles", "refuse_pas_interesse", "rappeler_plus_tard"];
+const INTERNAL_STATUS_ORDER = ["", "a_contacter", "attente_retour", "disponible", "indisponible", "interesse", "essais_en_cours", "essais_disponibles", "short_list", "call_back", "refuse_pas_interesse", "rappeler_plus_tard"];
 let PASSWORD = "";
 
 function normalizeStatus(status) {
@@ -1771,7 +1812,7 @@ async function sendReminder(id) {
   }
 }
 
-const TAPE_LATE_DAYS = 4;
+const TAPE_LATE_DAYS = 2;
 
 function daysSince(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -1783,6 +1824,13 @@ function toLocalDatetimeValue(iso) {
   if (isNaN(d)) return "";
   const p = n => String(n).padStart(2, "0");
   return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+
+const PROPOSAL_WINDOW_LABELS = { matin: "matin", apresmidi: "après-midi", journee: "journée" };
+function fmtProposal(s) {
+  if (!s.proposalDay) return "";
+  return new Date(s.proposalDay + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) +
+    " (" + (PROPOSAL_WINDOW_LABELS[s.proposalWindow] || "journée") + ")";
 }
 
 // Deux situations : self-tape OU casting présentiel.
@@ -1799,7 +1847,10 @@ function essaiStateFor(s) {
       }
       return { cls: cb ? "tape-late" : "tape-wait", icon: cb ? "🔁" : "📅", label: (cb ? "🔁 Call back le " : "📅 Convoqué le ") + dateStr + " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), waiting: false };
     }
-    return { cls: "tape-late", icon: cb ? "🔁" : "📅", label: (cb ? "🔁 Call back" : "📅 Présentiel") + " — à convoquer", waiting: false };
+    if (s.proposalDay) {
+      return { cls: "tape-wait", icon: "📨", label: "📨 " + (cb ? "Call back" : "Essai") + " proposé : " + fmtProposal(s) + " — en attente de l'agent", waiting: false };
+    }
+    return { cls: "tape-late", icon: cb ? "🔁" : "📅", label: (cb ? "🔁 Call back" : "📅 Présentiel") + " — à proposer/convoquer", waiting: false };
   }
   if (mode === "selftape") {
     if (s.vimeo) return { cls: "tape-ok", icon: "🎬", label: "🎬 Self-tape reçue", waiting: false };
@@ -1813,6 +1864,92 @@ function essaiStateFor(s) {
 }
 
 document.getElementById("open-planning").addEventListener("click", openPlanningModal);
+
+// ===== Contacts du projet =====
+let CONTACTS = [];
+
+document.getElementById("toggle-contacts-panel").addEventListener("click", () => {
+  const panel = document.getElementById("contacts-panel");
+  const opening = panel.style.display === "none";
+  panel.style.display = opening ? "block" : "none";
+  if (opening) refreshContacts();
+});
+
+async function refreshContacts() {
+  try {
+    const res = await fetch("/api/contacts?t=" + Date.now(), {
+      headers: { "x-dashboard-password": PASSWORD },
+      cache: "no-store"
+    });
+    if (res.ok) {
+      const data = await res.json();
+      CONTACTS = data.contacts || [];
+    }
+  } catch {}
+  renderContactsList();
+}
+
+function renderContactsList() {
+  const listEl = document.getElementById("contacts-list");
+  if (!listEl) return;
+  listEl.innerHTML = "";
+  if (CONTACTS.length === 0) {
+    listEl.innerHTML = '<div class="empty">Aucun contact enregistré pour le moment.</div>';
+    return;
+  }
+  CONTACTS.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "slot-admin-item";
+    row.innerHTML =
+      '<span style="font-weight:800; font-size:13px;">' + escapeHtml(c.name) + '</span>' +
+      '<span class="sa-meta">' + escapeHtml(c.fonction || "—") + '</span>' +
+      '<span class="sa-status" style="flex:1; color:var(--gray); font-size:12px;">' + escapeHtml(c.email) + '</span>' +
+      '<button class="sa-delete">Supprimer</button>';
+    row.querySelector(".sa-delete").addEventListener("click", async () => {
+      if (!confirm("Supprimer le contact " + c.name + " ?")) return;
+      try {
+        const res = await fetch("/api/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+          body: JSON.stringify({ action: "delete", id: c.id })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          CONTACTS = data.contacts || [];
+        }
+      } catch {}
+      renderContactsList();
+    });
+    listEl.appendChild(row);
+  });
+}
+
+document.getElementById("add-contact-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const msg = document.getElementById("add-contact-msg");
+  const data = Object.fromEntries(new FormData(form).entries());
+  msg.textContent = "Ajout...";
+  try {
+    const res = await fetch("/api/contacts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify({ action: "add", contact: { name: data.name, fonction: data.fonction, email: data.email } })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      msg.textContent = "Erreur : " + (body.error || res.status);
+      return;
+    }
+    CONTACTS = body.contacts || [];
+    msg.textContent = "Contact ajouté ✓";
+    form.reset();
+    renderContactsList();
+    setTimeout(() => { msg.textContent = ""; }, 2000);
+  } catch {
+    msg.textContent = "Erreur de connexion.";
+  }
+});
 
 // ===== Panneau Créneaux d'essais (réservation en ligne) =====
 let SLOTS = [];
@@ -2232,6 +2369,28 @@ function renderPlanning(modal) {
   const undated = subs.filter(s => !s.essaiDate).sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   modal.body.innerHTML = "";
+  const sendRow = document.createElement("div");
+  sendRow.style.cssText = "margin-bottom:16px;";
+  const sendPlanningBtn = document.createElement("button");
+  sendPlanningBtn.className = "refresh";
+  sendPlanningBtn.style.cssText = "border-color:var(--peutetre);color:var(--peutetre);";
+  sendPlanningBtn.textContent = "📤 Envoyer le planning aux contacts du projet";
+  sendPlanningBtn.addEventListener("click", () => openSendPlanningView(modal));
+  sendRow.appendChild(sendPlanningBtn);
+  const pdfBtn = document.createElement("button");
+  pdfBtn.className = "refresh";
+  pdfBtn.style.cssText = "border-color:var(--peutetre);color:var(--peutetre); margin-left:8px;";
+  pdfBtn.textContent = "⬇ PDF (avec photos)";
+  pdfBtn.addEventListener("click", async () => {
+    pdfBtn.disabled = true;
+    pdfBtn.textContent = "Génération...";
+    const pdf = await buildPlanningPdf();
+    if (pdf) pdf.doc.save(pdf.filename);
+    pdfBtn.disabled = false;
+    pdfBtn.textContent = "⬇ PDF (avec photos)";
+  });
+  sendRow.appendChild(pdfBtn);
+  modal.body.appendChild(sendRow);
   const groups = {};
   const groupOrder = [];
   dated.forEach(s => {
@@ -2255,9 +2414,200 @@ function renderPlanning(modal) {
   }
 }
 
+function slotLocationFor(subId) {
+  const sl = SLOTS.find(x => (x.bookedIds || []).includes(subId));
+  return sl && sl.location ? sl.location : "";
+}
+
+function downscalePhoto(dataUrl, maxW, maxH) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.width * ratio));
+        c.height = Math.max(1, Math.round(img.height * ratio));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.72));
+      } catch { resolve(null); }
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
+async function buildPlanningPdf() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("Librairie PDF non chargée — vérifie ta connexion puis recharge la page (Cmd+Shift+R).");
+    return null;
+  }
+  const subs = LAST_SUBMISSIONS.filter(s => !s.archived && s.essaiMode === "presentiel" && s.essaiDate)
+    .sort((a, b) => new Date(a.essaiDate) - new Date(b.essaiDate));
+  if (subs.length === 0) {
+    alert("Aucun essai planifié.");
+    return null;
+  }
+  const photos = {};
+  await Promise.all(subs.map(async s => {
+    const p = await fetchPhotoCached(s.id);
+    photos[s.id] = p ? await downscalePhoto(p, 240, 320) : null;
+  }));
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pageH = doc.internal.pageSize.getHeight();
+  let y = 18;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(25);
+  doc.text("ORAGE — Planning des essais", 14, y);
+  y += 6;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(130);
+  doc.text("Édité le " + new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) + " — Nicolas Derouet Casting", 14, y);
+  y += 9;
+
+  const fmtDay = iso => new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const fmtTime = iso => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const groups = {};
+  const order = [];
+  subs.forEach(s => {
+    const key = fmtDay(s.essaiDate);
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(s);
+  });
+
+  order.forEach(day => {
+    if (y > pageH - 40) { doc.addPage(); y = 18; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(25);
+    doc.text(day.charAt(0).toUpperCase() + day.slice(1), 14, y);
+    y += 2;
+    doc.setDrawColor(180); doc.line(14, y, 196, y);
+    y += 6;
+    groups[day].forEach(s => {
+      const rowH = 25;
+      if (y + rowH > pageH - 10) { doc.addPage(); y = 18; }
+      if (photos[s.id]) {
+        try { doc.addImage(photos[s.id], "JPEG", 14, y, 15, 20); } catch {}
+      } else {
+        doc.setFillColor(228); doc.rect(14, y, 15, 20, "F");
+      }
+      doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(25);
+      const line1 = fmtTime(s.essaiDate) + "   " + s.name;
+      doc.text(line1, 33, y + 6);
+      if (s.callback) {
+        doc.setTextColor(192, 72, 58); doc.setFontSize(8);
+        doc.text("CALL BACK", 33 + doc.getTextWidth(line1) + 4, y + 6);
+      }
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(100);
+      doc.text(s.role + (s.agency ? "  —  " + s.agency : ""), 33, y + 12);
+      const lieu = slotLocationFor(s.id);
+      if (lieu) doc.text("Lieu : " + lieu, 33, y + 17);
+      y += rowH;
+    });
+    y += 3;
+  });
+  const filename = "ORAGE_Planning_essais_" + new Date().toISOString().slice(0, 10) + ".pdf";
+  return { doc, filename };
+}
+
+async function openSendPlanningView(modal) {
+  modal.body.innerHTML = '<div class="empty">Chargement des contacts...</div>';
+  await refreshContacts();
+  modal.body.innerHTML = "";
+  const back = document.createElement("button");
+  back.className = "compare-back-btn";
+  back.textContent = "← Retour au planning";
+  back.addEventListener("click", () => renderPlanning(modal));
+  modal.body.appendChild(back);
+
+  if (CONTACTS.length === 0) {
+    modal.body.insertAdjacentHTML("beforeend", '<div class="empty">Aucun contact enregistré.<br>Ajoute d\'abord le réalisateur, la production... via « 👥 Contacts projet » dans la barre d\'outils.</div>');
+    return;
+  }
+
+  const title = document.createElement("p");
+  title.style.cssText = "font-size:14px; font-weight:700; margin:0 0 10px;";
+  title.textContent = "Envoyer le planning des essais à :";
+  modal.body.appendChild(title);
+
+  const selected = new Set();
+  const list = document.createElement("div");
+  CONTACTS.forEach(c => {
+    const row = document.createElement("label");
+    row.style.cssText = "display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px; cursor:pointer; font-size:13px;";
+    row.innerHTML = '<input type="checkbox"> <strong>' + escapeHtml(c.name) + '</strong> <span style="color:var(--gray);">' + escapeHtml(c.fonction || "") + ' · ' + escapeHtml(c.email) + '</span>';
+    row.querySelector("input").addEventListener("change", (e) => {
+      if (e.target.checked) selected.add(c.id); else selected.delete(c.id);
+      sendBtn.disabled = selected.size === 0;
+    });
+    list.appendChild(row);
+  });
+  modal.body.appendChild(list);
+
+  const attachRow = document.createElement("label");
+  attachRow.style.cssText = "display:flex; align-items:center; gap:8px; font-size:13px; margin:4px 0 8px; cursor:pointer;";
+  attachRow.innerHTML = '<input type="checkbox" checked> Joindre le planning en PDF (avec photos)';
+  const attachCb = attachRow.querySelector("input");
+  modal.body.appendChild(attachRow);
+
+  const noteInput = document.createElement("textarea");
+  noteInput.placeholder = "Message d'accompagnement (optionnel)";
+  noteInput.style.cssText = "width:100%; min-height:60px; background:var(--field); border:1px solid var(--line); border-radius:8px; color:var(--fg); padding:10px 12px; font-size:13px; font-family:inherit; margin:8px 0 12px; resize:vertical;";
+  modal.body.appendChild(noteInput);
+
+  const footer = document.createElement("div");
+  footer.style.cssText = "display:flex; align-items:center; gap:10px;";
+  const sendBtn = document.createElement("button");
+  sendBtn.className = "compare-launch-btn";
+  sendBtn.textContent = "📤 Envoyer le planning";
+  sendBtn.disabled = true;
+  const msg = document.createElement("span");
+  msg.style.cssText = "font-size:12px; color:var(--gray);";
+  footer.appendChild(sendBtn);
+  footer.appendChild(msg);
+  modal.body.appendChild(footer);
+
+  sendBtn.addEventListener("click", async () => {
+    sendBtn.disabled = true;
+    msg.textContent = "Envoi...";
+    try {
+      let pdfBase64 = null;
+      if (attachCb.checked) {
+        msg.textContent = "Génération du PDF...";
+        const pdf = await buildPlanningPdf();
+        if (pdf) {
+          pdfBase64 = pdf.doc.output("datauristring").split(",")[1];
+          if (pdfBase64.length > 3500000) {
+            pdfBase64 = null;
+            msg.textContent = "PDF trop lourd, envoi sans pièce jointe...";
+          }
+        }
+      }
+      msg.textContent = "Envoi...";
+      const res = await fetch("/api/send-planning", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+        body: JSON.stringify({ contactIds: [...selected], note: noteInput.value.trim(), pdfBase64 })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        msg.style.color = "var(--non)";
+        msg.textContent = "Erreur : " + (body.error || res.status);
+        sendBtn.disabled = false;
+        return;
+      }
+      msg.style.color = "var(--oui)";
+      msg.textContent = "Planning envoyé à " + body.sentTo + " contact(s) ✓";
+      setTimeout(() => renderPlanning(modal), 1500);
+    } catch {
+      msg.style.color = "var(--non)";
+      msg.textContent = "Erreur de connexion.";
+      sendBtn.disabled = false;
+    }
+  });
+}
+
 function buildPlanningItem(s, modal) {
   const slot = SLOTS.find(sl => (sl.bookedIds || []).includes(s.id)) || null;
-  const time = s.essaiDate ? new Date(s.essaiDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—";
+  const time = s.essaiDate ? new Date(s.essaiDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : (s.proposalDay ? "📨" : "—");
   const row = document.createElement("div");
   row.className = "planning-item";
   const actions = ['<button class="pa-fiche" title="Ouvrir la fiche complète">Fiche</button>'];
@@ -2273,12 +2623,17 @@ function buildPlanningItem(s, modal) {
     if (SLOTS.some(slotHasRoom)) actions.push('<button class="pa-move">➕ Assigner un créneau</button>');
   }
   row.innerHTML =
+    '<span class="p-photo" data-pp="' + s.id + '"></span>' +
     '<span class="p-time">' + time + '</span>' +
-    '<span class="p-name">' + escapeHtml(s.name) + (s.callback ? ' <span style="color:var(--non);font-size:10px;font-weight:800;letter-spacing:0.5px;">🔁 CALL BACK</span>' : '') + (slot && (slot.capacity || 1) > 1 ? ' <span style="color:var(--confirme);font-size:10px;">👥 duo</span>' : '') + '</span>' +
+    '<span class="p-name">' + escapeHtml(s.name) + (!s.essaiDate && s.proposalDay ? ' <span style="color:var(--gray);font-size:10.5px;font-weight:400;">proposé ' + escapeHtml(fmtProposal(s)) + '</span>' : '') + (s.callback ? ' <span style="color:var(--non);font-size:10px;font-weight:800;letter-spacing:0.5px;">🔁 CALL BACK</span>' : '') + (slot && (slot.capacity || 1) > 1 ? ' <span style="color:var(--confirme);font-size:10px;">👥 duo</span>' : '') + '</span>' +
     '<span class="p-role">' + escapeHtml(s.role) + '</span>' +
     '<span class="p-agency">' + escapeHtml(s.agency || "") + '</span>' +
     '<span class="p-actions">' + actions.join("") + '</span>';
 
+  fetchPhotoCached(s.id).then(photo => {
+    const ph = row.querySelector('[data-pp]');
+    if (ph && photo) ph.innerHTML = '<img src="' + photo + '" alt="">';
+  });
   row.querySelector(".pa-fiche").addEventListener("click", () => {
     const ficheModal = openModal(s.name, s.role, { wide: true });
     ficheModal.body.appendChild(buildCard(s));
@@ -2529,9 +2884,21 @@ function buildCard(s, opts) {
             '<option value="presentiel"' + (s.essaiMode === "presentiel" ? " selected" : "") + '>Casting présentiel</option>' +
           '</select>' +
           '<input type="datetime-local" class="essai-date-input" value="' + toLocalDatetimeValue(s.essaiDate) + '" style="' + (s.essaiMode === "presentiel" ? "" : "display:none;") + '">' +
+          '<input type="text" class="essai-conditions" placeholder="Conditions particulières (présence du réalisateur, partenaire...)" value="' + escapeHtml(s.conditions || "") + '" style="flex:1; min-width:180px; background:var(--field); border:1px solid var(--line); border-radius:6px; color:var(--fg); padding:6px 8px; font-size:12px;">' +
           '<button class="essai-save">Enregistrer</button>' +
           '<span class="essai-msg"></span>' +
           (s.essaiMode === "presentiel" ?
+            '</div><div class="essai-row propose-row">' +
+            '<label>1 · Proposer</label>' +
+            '<input type="date" class="propose-day" value="' + (s.proposalDay || "") + '" style="background:var(--field); border:1px solid var(--line); border-radius:6px; color:var(--fg); padding:5px 8px; font-size:12px;">' +
+            '<select class="propose-window" style="background:var(--field); border:1px solid var(--line); border-radius:6px; color:var(--fg); padding:6px 8px; font-size:12px;">' +
+              '<option value="matin"' + (s.proposalWindow === "matin" ? " selected" : "") + '>Matin</option>' +
+              '<option value="apresmidi"' + (s.proposalWindow === "apresmidi" ? " selected" : "") + '>Après-midi</option>' +
+              '<option value="journee"' + (!s.proposalWindow || s.proposalWindow === "journee" ? " selected" : "") + '>Journée</option>' +
+            '</select>' +
+            '<button class="propose-btn" title="Proposer ce jour à l\'agence AVANT la convocation précise — sans la scène. L\'email mentionne l\'option self-tape si indisponible.">📨 Proposer la dispo</button>' +
+            '<span class="propose-info">' + (s.proposalSentAt ? "Proposé le " + new Date(s.proposalSentAt).toLocaleDateString("fr-FR") + " : " + fmtProposal(s) : "") + '</span>' +
+            '<span style="color:var(--gray); font-size:11px;">→ 2 ·</span>' +
             '<label class="cb-callback"><input type="checkbox" class="essai-callback"' + (s.callback ? " checked" : "") + '> 🔁 Call back</label>' +
             '<button class="convocation-btn" title="Envoyer par email la convocation complète : date, heure, adresse + scène et consignes en pièce jointe">📤 Envoyer la convocation</button>' +
             '<span class="convocation-info">' + (s.convocationSentAt ? "Convocation envoyée le " + new Date(s.convocationSentAt).toLocaleDateString("fr-FR") : "") + '</span>'
@@ -2545,7 +2912,7 @@ function buildCard(s, opts) {
       ) +
       (archived ? "" :
         '<div class="scene-row">' +
-          '<label>Scène + consignes</label>' +
+          '<label>Scène + consignes self-tape (48h)</label>' +
           '<button class="scene-btn">📤 Envoyer par email</button>' +
           '<span class="scene-sent">' + (s.sceneSentAt ? "Envoyé le " + new Date(s.sceneSentAt).toLocaleDateString("fr-FR") : "") + '</span>' +
           (tape && tape.waiting ? '<button class="remind-btn">🔔 Relancer l\'agence</button>' : "") +
@@ -2706,7 +3073,7 @@ function buildCard(s, opts) {
     const sceneBtn = card.querySelector(".scene-btn");
     const sceneSentEl = card.querySelector(".scene-sent");
     sceneBtn.addEventListener("click", async () => {
-      if (!confirm("Envoyer la scène + consignes à " + (s.email || "(aucun email)") + " pour " + s.name + " ?")) return;
+      if (!confirm("Envoyer la scène + consignes SELF-TAPE à " + (s.email || "(aucun email)") + " pour " + s.name + " ?\n\nL\'email précise un délai de retour de 48h" + (s.conditions ? " et inclut les conditions particulières saisies" : "") + ".")) return;
       sceneBtn.disabled = true;
       sceneSentEl.textContent = "Envoi...";
       const result = await sendScene(s.id);
@@ -2734,6 +3101,9 @@ function buildCard(s, opts) {
           const dateVal = (mode === "presentiel" && essaiDateInput.value) ? new Date(essaiDateInput.value).toISOString() : "";
           ok = await updateField(s.id, "essaiDate", dateVal);
         }
+        if (ok) {
+          ok = await updateField(s.id, "conditions", card.querySelector(".essai-conditions").value.trim());
+        }
         essaiMsg.textContent = ok ? "Enregistré ✓" : "Erreur";
         if (ok) setTimeout(loadData, 800);
       });
@@ -2748,6 +3118,40 @@ function buildCard(s, opts) {
             setTimeout(() => { bookingLinkBtn.textContent = original; }, 1800);
           } catch {
             prompt("Copie ce lien manuellement :", url);
+          }
+        });
+      }
+      const proposeBtn = card.querySelector(".propose-btn");
+      if (proposeBtn) {
+        const proposeInfo = card.querySelector(".propose-info");
+        proposeBtn.addEventListener("click", async () => {
+          const dayVal = card.querySelector(".propose-day").value;
+          const winVal = card.querySelector(".propose-window").value;
+          if (!dayVal) {
+            alert("Choisis d'abord le jour à proposer.");
+            return;
+          }
+          const dayStr = new Date(dayVal + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+          if (!confirm("Proposer à " + (s.email || "(aucun email)") + " un " + (s.callback ? "call back" : "essai") + " pour " + s.name + " :\n\n" + dayStr + " (" + (PROPOSAL_WINDOW_LABELS[winVal] || "journée") + ")\n\nSans la scène — l'agence confirmera la disponibilité, ou proposera une self-tape si indisponible.")) return;
+          proposeBtn.disabled = true;
+          proposeInfo.textContent = "Envoi...";
+          try {
+            const res = await fetch("/api/send-proposal", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+              body: JSON.stringify({ id: s.id, day: dayVal, window: winVal })
+            });
+            const body = await res.json().catch(() => ({}));
+            if (res.ok) {
+              proposeInfo.textContent = "Proposition envoyée ✓";
+              setTimeout(loadData, 1200);
+            } else {
+              proposeInfo.textContent = "Erreur : " + (body.error || res.status);
+              proposeBtn.disabled = false;
+            }
+          } catch {
+            proposeInfo.textContent = "Erreur de connexion.";
+            proposeBtn.disabled = false;
           }
         });
       }
