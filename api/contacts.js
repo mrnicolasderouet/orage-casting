@@ -37,8 +37,25 @@ module.exports = async (req, res) => {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         name: String(contact.name).trim(),
         fonction: String(contact.fonction || "").trim(),
-        email: String(contact.email).trim()
+        email: String(contact.email).trim(),
+        phone: String(contact.phone || "").trim()
       });
+      await kvSet(KEY, contacts);
+      res.status(200).json({ ok: true, contacts });
+      return;
+    }
+    if (action === "update") {
+      if (!id || !contact || !contact.name || !contact.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) {
+        res.status(400).json({ error: "id, nom et email valide requis" });
+        return;
+      }
+      let found = false;
+      contacts = contacts.map(c => {
+        if (c.id !== id) return c;
+        found = true;
+        return { ...c, name: String(contact.name).trim(), fonction: String(contact.fonction || "").trim(), email: String(contact.email).trim(), phone: String(contact.phone || "").trim() };
+      });
+      if (!found) { res.status(404).json({ error: "Contact introuvable" }); return; }
       await kvSet(KEY, contacts);
       res.status(200).json({ ok: true, contacts });
       return;
