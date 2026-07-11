@@ -2,8 +2,34 @@
 const { kvGet, kvSet } = require("./_redis");
 const { guardDashboard } = require("./_auth");
 
-const KV_PREFIX = "orage";
-const KEY = `${KV_PREFIX}:agents_directory`;
+// Répertoire d'agents COMMUN aux deux projets (même base Redis).
+const KEY = "shared:agents_directory";
+const LEGACY_KEYS = ["orage:agents_directory", "traces:agents_directory"];
+
+// Migration unique : fusionne les anciens répertoires par projet dans le répertoire commun.
+async function loadAgentsWithMigration() {
+  let agents = (await kvGet(KEY)) || [];
+  if (agents.length > 0) return agents;
+  const seen = new Set();
+  const seenCombo = new Set();
+  const merged = [];
+  for (const lk of LEGACY_KEYS) {
+    const old = (await kvGet(lk)) || [];
+    for (const a of old) {
+      const ek = String(a.email || "").toLowerCase();
+      const ck = (String(a.agency || "") + "|" + String(a.name || "")).toLowerCase();
+      if ((ek && seen.has(ek)) || seenCombo.has(ck)) continue;
+      if (ek) seen.add(ek);
+      seenCombo.add(ck);
+      merged.push(a);
+    }
+  }
+  if (merged.length > 0) {
+    await kvSet(KEY, merged);
+    return merged;
+  }
+  return [];
+}
 
 const norm = s => String(s || "").trim();
 const emailOk = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -45,7 +71,7 @@ module.exports = async (req, res) => {
 
   try {
     if (req.method === "GET") {
-      const agents = ((await kvGet(KEY)) || []).map(liftLegacy);
+      const agents = (await loadAgentsWithMigration()).map(liftLegacy);
       res.status(200).json({ agents });
       return;
     }
@@ -54,7 +80,7 @@ module.exports = async (req, res) => {
       return;
     }
     const { action, agent, agents: incoming, id } = req.body || {};
-    let agents = ((await kvGet(KEY)) || []).map(liftLegacy);
+    let agents = (await loadAgentsWithMigration()).map(liftLegacy);
     const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
     if (action === "add") {

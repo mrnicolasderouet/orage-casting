@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
   try {
     const { agentIds, roleIds, message, includePassword, mode } = req.body || {};
     const isRelance = mode === "relance";
-    const allAgents = (await kvGet(`${KV_PREFIX}:agents_directory`)) || [];
+    const allAgents = (await kvGet("shared:agents_directory")) || [];
     const recipients = (Array.isArray(agentIds) && agentIds.length > 0)
       ? allAgents.filter(a => agentIds.includes(a.id))
       : allAgents;
@@ -96,8 +96,11 @@ module.exports = async (req, res) => {
     try {
       const now = new Date().toISOString();
       const sentIds = new Set(recipients.map(r => r.id));
-      const updated = allAgents.map(a => sentIds.has(a.id) ? { ...a, lastLaunchAt: now } : a);
-      await kvSet(`${KV_PREFIX}:agents_directory`, updated);
+      // Date de lancement mémorisée PAR PROJET (répertoire commun aux deux plateformes)
+      const updated = allAgents.map(a => sentIds.has(a.id)
+        ? { ...a, lastLaunch: { ...(a.lastLaunch || {}), [KV_PREFIX]: now } }
+        : a);
+      await kvSet("shared:agents_directory", updated);
     } catch (err) {
       console.error("lastLaunchAt update failed", err);
     }
