@@ -115,6 +115,7 @@ function render(message, isError) {
       '<div class="current-slot">' +
         '<h3>' + (isPast ? "Essai passé" : "Votre rendez-vous") + '</h3>' +
         '<div class="cs-when">' + escapeHtml(fmtDay(d.mySlot.start)) + ' à ' + fmtTime(d.mySlot.start) + '</div>' +
+        '<div class="cs-loc">🎭 ' + escapeHtml(d.candidate.name) + ' — rôle de ' + escapeHtml(d.candidate.role) + '</div>' +
         (d.mySlot.location ? '<div class="cs-loc">📍 ' + escapeHtml(d.mySlot.location) + '</div>' : "") +
         (!isPast ? (
           canModify ?
@@ -144,7 +145,7 @@ function render(message, isError) {
         html += '<div class="day-group"><h3>' + escapeHtml(day) + '</h3><div class="slot-grid">' +
           groups[day].map(s =>
             '<button class="slot-btn" data-slot="' + s.id + '">' + fmtTime(s.start) +
-            '<small>' + s.durationMin + ' min' + (s.capacity > 1 ? ' · Duo' + (s.capacity - s.taken === 1 ? ' — 1 place restante' : '') : '') + (s.location ? " · " + escapeHtml(s.location) : "") + '</small></button>'
+            '<small>' + s.durationMin + ' min' + (s.capacity > 1 ? ' · Duo' + (s.withRoles && s.withRoles.length > 0 ? ' — avec le rôle de ' + s.withRoles.map(escapeHtml).join(', ') : '') : '') + (s.location ? " · " + escapeHtml(s.location) : "") + '</small></button>'
           ).join("") +
         '</div></div>';
       });

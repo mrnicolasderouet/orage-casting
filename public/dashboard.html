@@ -326,11 +326,30 @@
   .essai-msg { font-size: 11px; color: var(--oui); white-space: nowrap; }
   .planning-day { margin-bottom: 22px; }
   .planning-day h4 { font-size: 13px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin: 0 0 8px; }
-  .planning-item { display: grid; grid-template-columns: 60px 1.4fr 1fr 1fr; gap: 10px; align-items: center; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 13px; }
+  .planning-item { display: grid; grid-template-columns: 52px 1.2fr 0.9fr 0.9fr auto; gap: 10px; align-items: center; background: #0d1826; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; font-size: 13px; }
   .planning-item .p-time { font-weight: 800; color: var(--peutetre); }
   .planning-item .p-name { font-weight: 700; }
   .planning-item .p-role { color: var(--gray); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .planning-item .p-agency { color: var(--gray); font-size: 11.5px; text-align: right; }
+  .planning-item .p-agency { color: var(--gray); font-size: 11.5px; }
+  .planning-item .p-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+  .planning-item .p-actions button { background: transparent; border: 1px solid var(--line); color: var(--gray); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+  .planning-item .p-actions button:hover { color: #fff; border-color: var(--green-light); }
+  .planning-item .p-actions button.pa-danger { border-color: var(--non); color: var(--non); }
+  .planning-item .p-actions button.pa-danger:hover { background: var(--non); color: #fff; }
+  .pk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+  .pk-slot-btn { background: #0d1826; border: 1px solid var(--line); border-radius: 8px; color: #fff; padding: 11px 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; }
+  .pk-slot-btn small { display: block; font-weight: 400; font-size: 10px; color: var(--gray); margin-top: 3px; }
+  .pk-slot-btn:hover:not(:disabled) { border-color: var(--green-light); background: rgba(47,154,91,0.12); }
+  .pk-slot-btn:disabled { opacity: 0.5; cursor: wait; }
+  .assign-search { width: 100%; background: #0a1420; border: 1px solid var(--line); border-radius: 8px; color: #fff; padding: 11px 14px; font-size: 14px; margin-bottom: 12px; }
+  .assign-search:focus { outline: none; border-color: var(--green-light); }
+  .assign-list { max-height: 46vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+  .assign-role-h { font-size: 10px; color: var(--green-light); text-transform: uppercase; letter-spacing: 1px; padding: 10px 8px 4px; }
+  .assign-item { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 10px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+  .assign-item:hover { background: #0d1826; }
+  .assign-item.selected { border-color: var(--confirme); background: rgba(154,111,47,0.12); }
+  .assign-item .ai-name { font-size: 13.5px; font-weight: 700; }
+  .assign-item .ai-agency { font-size: 11px; color: var(--gray); text-align: right; }
   .booking-link-btn { background: transparent; border: 1px solid var(--confirme); color: var(--confirme); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .booking-link-btn:hover { background: var(--confirme); color: #fff; }
   .booking-invite-btn { background: transparent; border: 1px solid var(--peutetre); color: var(--peutetre); padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
@@ -1852,26 +1871,90 @@ function renderSlotsList() {
 function openAssignModal(slot) {
   const when = new Date(slot.start).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) +
     " à " + new Date(slot.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  const modal = openModal("➕ Assigner un candidat", "Créneau du " + when + (slot.location ? " — " + slot.location : "") + ". Aucun email n'est envoyé : à toi de prévenir l'agence si ce n'est pas déjà fait.");
-  const candidates = LAST_SUBMISSIONS
-    .filter(x => !x.archived && !(slot.bookedIds || []).includes(x.id))
-    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  const modal = openModal("➕ Assigner un candidat", "Créneau du " + when + (slot.location ? " — " + slot.location : "") + ". Aucun email n\'est envoyé : à toi de prévenir l\'agence si ce n\'est pas déjà fait.");
+
+  // Dédoublonnage strict par id + exclusion des archivés et des déjà réservés sur ce créneau.
+  const seen = new Set();
+  const candidates = LAST_SUBMISSIONS.filter(x => {
+    if (!x || !x.id || x.archived) return false;
+    if ((slot.bookedIds || []).includes(x.id)) return false;
+    if (seen.has(x.id)) return false;
+    seen.add(x.id);
+    return true;
+  }).sort((a, b) => (a.role || "").localeCompare(b.role || "", "fr") || a.name.localeCompare(b.name, "fr"));
+
   if (candidates.length === 0) {
     modal.body.innerHTML = '<div class="empty">Aucun candidat disponible.</div>';
     return;
   }
-  const select = document.createElement("select");
-  select.style.cssText = "width:100%; background:#0d1826; border:1px solid var(--line); border-radius:6px; color:#fff; padding:10px; font-size:14px; margin-bottom:14px;";
-  select.innerHTML = '<option value="">— Choisir un comédien —</option>' +
-    candidates.map(c => '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + ' — ' + escapeHtml(c.role) + (c.agency ? ' (' + escapeHtml(c.agency) + ')' : '') + '</option>').join("");
+
+  // Vraies candidatures en double (même comédien, même rôle) : on affiche la date pour les distinguer.
+  const dupCounts = {};
+  candidates.forEach(c => {
+    const k = (c.name || "").trim().toLowerCase() + "|" + (c.role || "");
+    dupCounts[k] = (dupCounts[k] || 0) + 1;
+  });
+
+  let selectedId = "";
+  const search = document.createElement("input");
+  search.type = "text";
+  search.placeholder = "🔍 Rechercher un comédien, une agence...";
+  search.className = "assign-search";
+  const listEl = document.createElement("div");
+  listEl.className = "assign-list";
+  const footer = document.createElement("div");
+  footer.style.cssText = "display:flex; align-items:center; gap:10px; margin-top:14px;";
   const btn = document.createElement("button");
   btn.className = "compare-launch-btn";
   btn.textContent = "Assigner à ce créneau";
   btn.disabled = true;
   const msg = document.createElement("span");
-  msg.style.cssText = "font-size:12px; color:var(--non); margin-left:10px;";
-  select.addEventListener("change", () => { btn.disabled = !select.value; });
+  msg.style.cssText = "font-size:12px; color:var(--gray);";
+  footer.appendChild(btn);
+  footer.appendChild(msg);
+
+  const norm = s => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  function renderList() {
+    const q = norm(search.value.trim());
+    listEl.innerHTML = "";
+    const filtered = candidates.filter(c => !q || norm(c.name).includes(q) || norm(c.agency).includes(q) || norm(c.role).includes(q));
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="empty" style="padding:20px 0;">Aucun résultat.</div>';
+      return;
+    }
+    let currentRole = null;
+    filtered.forEach(c => {
+      if (c.role !== currentRole) {
+        currentRole = c.role;
+        const h = document.createElement("div");
+        h.className = "assign-role-h";
+        h.textContent = c.role || "Sans rôle";
+        listEl.appendChild(h);
+      }
+      const k = (c.name || "").trim().toLowerCase() + "|" + (c.role || "");
+      const item = document.createElement("div");
+      item.className = "assign-item" + (c.id === selectedId ? " selected" : "");
+      item.innerHTML =
+        '<span class="ai-name">' + escapeHtml(c.name) + '</span>' +
+        '<span class="ai-agency">' + escapeHtml(c.agency || "—") +
+          (dupCounts[k] > 1 && c.submittedAt ? ' · candidature du ' + new Date(c.submittedAt).toLocaleDateString("fr-FR") : "") +
+        '</span>';
+      item.addEventListener("click", () => {
+        selectedId = c.id;
+        btn.disabled = false;
+        btn.textContent = "Assigner " + c.name;
+        listEl.querySelectorAll(".assign-item").forEach(el => el.classList.remove("selected"));
+        item.classList.add("selected");
+      });
+      listEl.appendChild(item);
+    });
+  }
+  search.addEventListener("input", renderList);
+  renderList();
+
   btn.addEventListener("click", async () => {
+    if (!selectedId) return;
     btn.disabled = true;
     msg.style.color = "var(--gray)";
     msg.textContent = "Assignation...";
@@ -1879,7 +1962,7 @@ function openAssignModal(slot) {
       const res = await fetch("/api/slots-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
-        body: JSON.stringify({ action: "assign", slotId: slot.id, submissionId: select.value })
+        body: JSON.stringify({ action: "assign", slotId: slot.id, submissionId: selectedId })
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -1897,9 +1980,10 @@ function openAssignModal(slot) {
       btn.disabled = false;
     }
   });
-  modal.body.appendChild(select);
-  modal.body.appendChild(btn);
-  modal.body.appendChild(msg);
+
+  modal.body.appendChild(search);
+  modal.body.appendChild(listEl);
+  modal.body.appendChild(footer);
 }
 
 async function slotAction(action, slotId, extra) {
@@ -1980,9 +2064,39 @@ document.getElementById("create-slots-form").addEventListener("submit", async (e
   }
 });
 
-function openPlanningModal() {
+async function fetchSlotsQuiet() {
+  try {
+    const res = await fetch("/api/slots-admin?t=" + Date.now(), {
+      headers: { "x-dashboard-password": PASSWORD },
+      cache: "no-store"
+    });
+    if (res.ok) {
+      const d = await res.json();
+      SLOTS = d.slots || [];
+    }
+  } catch {}
+}
+
+function slotHasRoom(sl) {
+  return !sl.blocked && (sl.bookedIds || []).length < (sl.capacity || 1) && new Date(sl.start).getTime() > Date.now();
+}
+
+async function openPlanningModal() {
+  const modal = openModal("📅 Planning des essais", "Groupé par journée. Agis directement : déplacer, libérer, modifier une heure, ouvrir une fiche.", { wide: true });
+  modal.body.innerHTML = '<div class="empty">Chargement...</div>';
+  await fetchSlotsQuiet();
+  renderPlanning(modal);
+}
+
+async function planningReload(modal) {
+  modal.body.innerHTML = '<div class="empty">Mise à jour...</div>';
+  await loadData();
+  await fetchSlotsQuiet();
+  renderPlanning(modal);
+}
+
+function renderPlanning(modal) {
   const subs = LAST_SUBMISSIONS.filter(s => !s.archived && s.essaiMode === "presentiel");
-  const modal = openModal("📅 Planning des essais", "Candidats en casting présentiel, groupés par journée.", { wide: true });
   if (subs.length === 0) {
     modal.body.innerHTML = '<div class="empty">Aucun candidat en essai présentiel pour le moment.<br>Définis le « Type d\'essai » dans les détails d\'une fiche pour l\'ajouter ici.</div>';
     return;
@@ -1990,14 +2104,7 @@ function openPlanningModal() {
   const dated = subs.filter(s => s.essaiDate).sort((a, b) => new Date(a.essaiDate) - new Date(b.essaiDate));
   const undated = subs.filter(s => !s.essaiDate).sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
-  const buildItem = (s, time) =>
-    '<div class="planning-item">' +
-      '<span class="p-time">' + time + '</span>' +
-      '<span class="p-name">' + escapeHtml(s.name) + '</span>' +
-      '<span class="p-role">' + escapeHtml(s.role) + '</span>' +
-      '<span class="p-agency">' + escapeHtml(s.agency || "") + '</span>' +
-    '</div>';
-
+  modal.body.innerHTML = "";
   const groups = {};
   const groupOrder = [];
   dated.forEach(s => {
@@ -2005,19 +2112,148 @@ function openPlanningModal() {
     if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
     groups[key].push(s);
   });
-
-  let html = "";
   groupOrder.forEach(day => {
-    html += '<div class="planning-day"><h4>' + escapeHtml(day) + ' — ' + groups[day].length + ' essai(s)</h4>' +
-      groups[day].map(s => buildItem(s, new Date(s.essaiDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }))).join("") +
-    '</div>';
+    const dayEl = document.createElement("div");
+    dayEl.className = "planning-day";
+    dayEl.innerHTML = '<h4>' + escapeHtml(day) + ' — ' + groups[day].length + ' essai(s)</h4>';
+    groups[day].forEach(s => dayEl.appendChild(buildPlanningItem(s, modal)));
+    modal.body.appendChild(dayEl);
   });
   if (undated.length > 0) {
-    html += '<div class="planning-day"><h4>À convoquer — sans date (' + undated.length + ')</h4>' +
-      undated.map(s => buildItem(s, "—")).join("") +
-    '</div>';
+    const dayEl = document.createElement("div");
+    dayEl.className = "planning-day";
+    dayEl.innerHTML = '<h4>À convoquer — sans date (' + undated.length + ')</h4>';
+    undated.forEach(s => dayEl.appendChild(buildPlanningItem(s, modal)));
+    modal.body.appendChild(dayEl);
   }
-  modal.body.innerHTML = html;
+}
+
+function buildPlanningItem(s, modal) {
+  const slot = SLOTS.find(sl => (sl.bookedIds || []).includes(s.id)) || null;
+  const time = s.essaiDate ? new Date(s.essaiDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—";
+  const row = document.createElement("div");
+  row.className = "planning-item";
+  const actions = ['<button class="pa-fiche" title="Ouvrir la fiche complète">Fiche</button>'];
+  if (slot) {
+    actions.push('<button class="pa-move" title="Déplacer sur un autre créneau">↔ Déplacer</button>');
+    actions.push('<button class="pa-unassign pa-danger" title="Libérer le créneau et retirer la convocation">✕ Libérer</button>');
+  } else if (s.essaiDate) {
+    actions.push('<button class="pa-edit" title="Modifier l\'heure saisie manuellement">🕐 Modifier</button>');
+    if (SLOTS.some(slotHasRoom)) actions.push('<button class="pa-move" title="Basculer sur un créneau">➕ Créneau</button>');
+    actions.push('<button class="pa-clear pa-danger" title="Retirer la convocation">✕ Retirer</button>');
+  } else {
+    actions.push('<button class="pa-edit">🕐 Fixer une date</button>');
+    if (SLOTS.some(slotHasRoom)) actions.push('<button class="pa-move">➕ Assigner un créneau</button>');
+  }
+  row.innerHTML =
+    '<span class="p-time">' + time + '</span>' +
+    '<span class="p-name">' + escapeHtml(s.name) + (slot && (slot.capacity || 1) > 1 ? ' <span style="color:var(--confirme);font-size:10px;">👥 duo</span>' : '') + '</span>' +
+    '<span class="p-role">' + escapeHtml(s.role) + '</span>' +
+    '<span class="p-agency">' + escapeHtml(s.agency || "") + '</span>' +
+    '<span class="p-actions">' + actions.join("") + '</span>';
+
+  row.querySelector(".pa-fiche").addEventListener("click", () => {
+    const ficheModal = openModal(s.name, s.role, { wide: true });
+    ficheModal.body.appendChild(buildCard(s));
+  });
+  const moveBtn = row.querySelector(".pa-move");
+  if (moveBtn) moveBtn.addEventListener("click", () => openSlotPicker(modal, s, slot));
+  const unassignBtn = row.querySelector(".pa-unassign");
+  if (unassignBtn) unassignBtn.addEventListener("click", async () => {
+    if (!confirm("Libérer le créneau de " + s.name + " et retirer sa convocation ? (Aucun email envoyé — pense à prévenir l\'agence.)")) return;
+    unassignBtn.disabled = true;
+    await planningAction({ action: "unassign", slotId: slot.id, submissionId: s.id }, modal);
+  });
+  const clearBtn = row.querySelector(".pa-clear");
+  if (clearBtn) clearBtn.addEventListener("click", async () => {
+    if (!confirm("Retirer la convocation de " + s.name + " ?")) return;
+    clearBtn.disabled = true;
+    await updateField(s.id, "essaiDate", "");
+    planningReload(modal);
+  });
+  const editBtn = row.querySelector(".pa-edit");
+  if (editBtn) editBtn.addEventListener("click", () => {
+    const actionsEl = row.querySelector(".p-actions");
+    actionsEl.innerHTML =
+      '<input type="datetime-local" class="pa-dt" value="' + toLocalDatetimeValue(s.essaiDate) + '" style="background:#0a1420;border:1px solid var(--line);border-radius:6px;color:#fff;padding:5px 8px;font-size:12px;color-scheme:dark;">' +
+      '<button class="pa-ok">OK</button><button class="pa-cancel">Annuler</button>';
+    actionsEl.querySelector(".pa-cancel").addEventListener("click", () => renderPlanning(modal));
+    actionsEl.querySelector(".pa-ok").addEventListener("click", async () => {
+      const v = actionsEl.querySelector(".pa-dt").value;
+      if (!v) return;
+      actionsEl.querySelector(".pa-ok").disabled = true;
+      await updateField(s.id, "essaiDate", new Date(v).toISOString());
+      planningReload(modal);
+    });
+  });
+  return row;
+}
+
+function openSlotPicker(modal, sub, fromSlot) {
+  modal.body.innerHTML = "";
+  const back = document.createElement("button");
+  back.className = "compare-back-btn";
+  back.textContent = "← Retour au planning";
+  back.addEventListener("click", () => renderPlanning(modal));
+  modal.body.appendChild(back);
+
+  const title = document.createElement("p");
+  title.className = "section-title";
+  title.style.cssText = "font-size:14px;margin:0 0 12px;";
+  title.textContent = (fromSlot ? "Déplacer " : "Assigner ") + sub.name + (fromSlot ? " vers quel créneau ?" : " sur quel créneau ?") + " (aucun email envoyé)";
+  modal.body.appendChild(title);
+
+  const avail = SLOTS.filter(slotHasRoom).filter(sl => !fromSlot || sl.id !== fromSlot.id);
+  if (avail.length === 0) {
+    modal.body.insertAdjacentHTML("beforeend", '<div class="empty">Aucun créneau disponible. Crée des créneaux via « 🗓 Créneaux d\'essais ».</div>');
+    return;
+  }
+  const groups = {};
+  const order = [];
+  avail.forEach(sl => {
+    const key = new Date(sl.start).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(sl);
+  });
+  order.forEach(day => {
+    const dayEl = document.createElement("div");
+    dayEl.className = "planning-day";
+    dayEl.innerHTML = '<h4>' + escapeHtml(day) + '</h4><div class="pk-grid"></div>';
+    const grid = dayEl.querySelector(".pk-grid");
+    groups[day].forEach(sl => {
+      const btn = document.createElement("button");
+      btn.className = "pk-slot-btn";
+      const remaining = (sl.capacity || 1) - (sl.bookedIds || []).length;
+      btn.innerHTML = new Date(sl.start).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) +
+        '<small>' + sl.durationMin + " min" + ((sl.capacity || 1) > 1 ? " · 👥 " + remaining + " place(s)" : "") + (sl.location ? " · " + escapeHtml(sl.location) : "") + '</small>';
+      btn.addEventListener("click", async () => {
+        grid.querySelectorAll("button").forEach(b => b.disabled = true);
+        const payload = fromSlot ?
+          { action: "move", fromSlotId: fromSlot.id, toSlotId: sl.id, submissionId: sub.id } :
+          { action: "assign", slotId: sl.id, submissionId: sub.id };
+        await planningAction(payload, modal);
+      });
+      grid.appendChild(btn);
+    });
+    modal.body.appendChild(dayEl);
+  });
+}
+
+async function planningAction(payload, modal) {
+  try {
+    const res = await fetch("/api/slots-admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-dashboard-password": PASSWORD },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert("Erreur : " + (body.error || res.status));
+    }
+  } catch {
+    alert("Erreur de connexion.");
+  }
+  planningReload(modal);
 }
 
 async function deleteForever(id) {
